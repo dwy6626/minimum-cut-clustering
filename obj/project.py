@@ -50,7 +50,9 @@ class Project:
         disorder_counts = 0  # finally: len(self.disorders) - 1
         if self.__reference_system.has_hamiltonian():
             disorder = self.setting.get('disorder', '0')
-            if disorder.isdigit():
+            if isinstance(disorder, int):
+                disorder_counts = disorder
+            elif disorder.isdigit():
                 disorder_counts = int(disorder)
             else:
                 # load file:

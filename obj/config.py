@@ -62,9 +62,11 @@ class Config:
         local_os = platform.system()
         print('Your os is', local_os, '\n')
         if local_os == 'Linux':
-            mpl.use('Agg')
-        # else:
-        #     mpl.use('Qt4Agg')
+            # if cannot modify backend, than don't do that
+            try:
+                mpl.use('Agg')
+            except:
+                pass
 
         print('upadate the matplotlib rc:')
         for k, v in self.__mpl_dict.items():
