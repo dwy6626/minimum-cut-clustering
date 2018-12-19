@@ -1,0 +1,165 @@
+NAME
+    Minimum-Cut Clustering - a python3 tool to analyze an exciton network in photosynthesis systems
+
+SYNOPSIS
+    python3 main.py [file] [job name] -[options] [dictionary]=[value] --[keywords]
+
+NOT
+    The first argument without '=' and '-' will be the input file path
+
+    The second argument without '=' and '-' will be the job name
+        (if no this argument, the default is the date and time)
+
+    Other arguments (options, dictionaries and keywords) can permute each other
+
+    [file]
+        ./input/[file]  will be used if there is no '/' in [file]
+        if the file name ends with '.H', it will be regarded as Hamiltonian file
+        if the file name ends with '.p', it will be regarded as a project object of this program (dumped by pickle)
+
+    H=[file] and pos=[file] is necessarily for some functions (see below)
+
+    Notice that in all matrix, the j, i term represents rate/flow from i to j
+
+OPTIONS
+    -h  Print help message and exit
+
+    -a  Animations for excitation energy transfer
+        (Hamiltonian and position of sites must be provided)
+
+    -b  List of bottleneck indices on the input network
+
+    -k  Check rate constants: if s -> t rate > t -> s rate for all s > t
+
+    -l  Print the latex table for the Hamiltonian, rate constant matrices (when -r asserted) and the cluster results
+
+    -t  Plot minimun-cut binary Tree.
+
+    -c  Build up clustering CGM models: (-t is not necessary)
+        with out min-cut tree:
+            s  SC      Simple cut-off method
+            r  SR      Simple ratio cut-off method
+            b  BUC     Bottom-up clustering method
+            t  TDC     Top-down clustering method (same flow: assume soruce > target)
+
+        with min-cut tree:
+            d  DCst    cut-off method by choosing source to target rate as the only rate between 2 exciton states
+            e  DCmax   cut-off method by cut larger rate between states
+            f  DCrms   cut-off method by cut rms rate between states
+            g  DCgeo   cut-off method by cut geometric mean rate between states
+            h  DCcp    cut-off method by cut coupling constants (with an input Hamiltonian)
+
+            k  KM   K-Means clustering (distance = 1/rate, digraph, initial = DC results)
+
+        others:
+            c  Calculate dynamics error (population difference/cost)
+
+            manual clustering is conducted if DICTIONARIES map=[cluster map] is provided (even without -c)
+
+    -r[]  Save the rate constant matrices
+    -n[]  Plot diagram using graphviz(dot)
+    -M[]  Propagate population dynamics on exciton basis
+    -p[]  Flow analysis: time integrated flux
+    -F[]  Flow analysis: path decomposition via Ford-Fulkerson algorithms / path with largest minimum weight
+    -I[]  The site-exciton plot (Hamiltonian must be provided)
+    -e[]  Plot the exciton population on each sites (Hamiltonian and position of sites must be provided)
+        The elements in [] can be:
+            integer  n-cluster model
+            c  for all clustering results
+            n  original network
+            i-j  x-cluster model, for x in range(i,j+1)
+        A simple example:
+            [n,3-6,8] will give the 3, 4, 5, 6, 8 cluster results and the original network (n)
+            [c] will give all the clustering results
+        The default (e.g.: -r) value is [n,c]
+
+DICTIONARIES
+    H=[File]
+        Use effective Hamiltonian to transform the exciton basis results into site basis results
+
+    pos=[File]
+        Format: [Site Name] [x] [y] [z] \n
+
+    disorder=[Integer|File]
+        generate .H with static disorder
+
+    sd=[Integer], default=100
+        standard deviation for gaussian static disorder (unit: wavenumber)
+
+    s=[node]
+    t=[node]
+        The specific source and target in construction of minimum-cut tree
+
+    map=[cluster map]
+        Manual clustering
+        format:
+            1,2,3|4,6,7|5,10,9|8
+
+    cutoff=[float], default=0.01 (ps)
+        cut-off value for output rate in network diagram or flow diagram
+
+    decimal=[Integer], default=2
+        Adjust the display decimal point in graph     
+
+    norm=[true(default)|false|both]
+        Normalize the interflow in minimum-cut binary tree
+
+    propagate=[exponent(default)|poorman]
+        Choose the dynamics propagation method
+        Note that in the poorman method, insufficient grids will raise serious numerical error
+
+    time=[float], default=6 (ps)
+        Dynamics propagation time
+
+    init=[source|sink|equally(default)|boltz|(Exciton Name)]
+        Initial exciton population for dynamics propagation
+        The (Exciton Name) can be a single exciton, or excitons separated by ','
+
+    grid=[Integer], default=100
+        Number of time grid in dynamics propagation
+
+    spline=[int], default=3000
+        number of grid on smoothed line, when -p asserted or population difference calculated
+
+    marker=[true(default)|false]
+        Plot marker in cost figure
+
+    format=[format], default=pdf
+        Specify format of output pictures (graphviz and pyplot)
+
+    dpi=[Integer], default=100
+        Set the dpi of png file (graphviz and pyplot)
+
+    ymax=[float]
+        Set the y axis maximum in resulting plot of dynamics propagation (for pyplot)
+
+    xmax=[float]
+        Set the x axis maximum in resulting plot of instant flux (for pyplot)
+
+    cost=[Integer], default=15
+        Max number of cluster on
+            1. population difference
+            2. K-Means clustering
+
+
+KEYWORD
+    --log
+        more output in commend lines
+
+    --labelorder
+        sort nodes by string order
+
+    --site
+        plot population dynamics on site basis (when -M asserted and Hamiltonian is provided)
+
+    --allsite
+        mark all sites in animation / exciton plot
+
+    --norankdown
+        cancel the artificial ranking from highest energy to lowest energy
+
+    --nolegend
+        pyplot without legends
+
+    --xlabel
+        external label for graphviz (when -d asserted)

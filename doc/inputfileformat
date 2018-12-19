@@ -1,0 +1,21 @@
+.in file (rate constant input)
+
+--
+
+(State Name) (n)
+State Energy (n)
+Rate Constant Matrix (n x n)
+
+****************************
+****************************
+
+.H file (Hamiltonian input)
+
+--
+
+(Site Name) (n)
+Hamintonian (n x n)
+
+****************************
+****************************
+n = Size
