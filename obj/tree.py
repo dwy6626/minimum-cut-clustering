@@ -12,8 +12,8 @@ class MinCutTree:
     def __init__(self, system, ref_tree=None):
 
         # global source and target
-        self.tree_source = system.back_ptr.setting.Setting.get('s', 'not a node')
-        self.tree_target = system.back_ptr.setting.Setting.get('t', 'not a node')
+        self.tree_source = system.back_ptr.setting.get('s', 'not a node')
+        self.tree_target = system.back_ptr.setting.get('t', 'not a node')
 
         self.back_ptr = system
 
@@ -28,10 +28,10 @@ class MinCutTree:
         # 1: not normalized
         self.norm = (False, False)
         while True:
-            self.set_normalized(system.back_ptr.setting.Setting['norm'])
+            self.set_normalized(system.back_ptr.setting['norm'])
             if any(self.norm):
                 break
-            system.back_ptr.setting.Setting['norm'] = input(
+            system.back_ptr.setting['norm'] = input(
                 'if the maximum flow need to be normalized?\n'
                 'please enter one of the following:\n'
                 '{}\n'.format(NormTemplate)
@@ -85,7 +85,7 @@ class MinCutTree:
         if r not in subset:
             # disordered networks:
             # use the state name to determinate the source:
-            if self.back_ptr.get_index() != 0 or 'labelorder' in self.back_ptr.back_ptr.setting.KeyWords:
+            if self.back_ptr.get_index() != 0 or 'labelorder' in self.back_ptr.back_ptr.setting:
                 try:
                     return str(_func(map(int, subset)))
                 except:
@@ -141,7 +141,7 @@ class MinCutTree:
 
     def draw(self):
         file_name = self.back_ptr.get_output_name('Tree')
-        file_format = self.back_ptr.back_ptr.setting.Setting['format'].lower()
+        file_format = self.back_ptr.back_ptr.setting['format'].lower()
         dot_path = self.back_ptr.back_ptr.config.get_graphaviz_dot_path()
 
         for run_name, norm in self.run(file_name):
@@ -183,15 +183,15 @@ class MinCutTree:
     def __to_dot(self, file_name, norm):
         setting = self.back_ptr.back_ptr.setting
         color_dict = plot.node_color_energy(self.back_ptr.ExcitonName,
-                                            self.back_ptr.back_ptr.reference_system.ExcitonEnergies)
+                                            self.back_ptr.get_original().ExcitonEnergies)
         flow_dict = alg.flow_kmeans(self.collect_flow(norm))
 
-        dpi = pass_int(setting.Setting['dpi'])
+        dpi = pass_int(setting['dpi'])
 
         with open(file_name, 'w') as f:
             f.write('strict digraph  {{\nranksep=0.1;\ndpi={};\n'.format(dpi))
             self.root.write_data(f, color_dict, flow_dict,
-                                 setting.Setting['decimal'], norm
+                                 setting['decimal'], norm
                                  )
             f.write('}')
 

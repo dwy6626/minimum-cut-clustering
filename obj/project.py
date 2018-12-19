@@ -1,7 +1,6 @@
 # import local modules
 from aux import *
 from .system import System
-from .setting import Setting
 from .config import Config
 import alg
 import plot
@@ -14,46 +13,66 @@ class Project:
     def __init__(self, setting, config=None):
         self.col = ['Method', 'N', 'CGM', 'OverlapFactor', 'PopDiff']
 
-        self.setting = Setting(setting)
+        self.setting = setting
 
         if config is None:
             config = Config()
         self.config = config
 
-        self.reference_system = System(self.setting.InputFileName, self)
+        self.__reference_system = None
+
+        self.data_frame = []
+        self.SitePos = None
+
+        self.disorders = None
+        self.discard_disorders = []
+        self.__systems = []
+        self.overlap_factors = []
+        self.overlap_arrays = []
+
+    def build_reference_system(self, argv,
+                               is_rate_matrix=False, as_file_path=False,
+                               additional_hamiltonian_load='',
+                               additional_hamiltonian_string=''):
+        if as_file_path:
+            argv = self.load_file(argv)
+        if additional_hamiltonian_load:
+            additional_hamiltonian_string = self.load_file(additional_hamiltonian_load)
+        self.__reference_system = System(
+            argv, back_ptr=self, is_rate_matrix=is_rate_matrix,
+            additional_hamiltonian_string=additional_hamiltonian_string
+        )
+
+        self.load_pos(self.setting.get('pos'))
 
         # disorder
-        self.disorders = [np.zeros((1, len(self.reference_system)))]
+        self.disorders = [np.zeros((1, len(self.__reference_system)))]
         disorder_counts = 0  # finally: len(self.disorders) - 1
-        if self.reference_system.has_hamiltonian():
-            disorder = self.setting.Setting.get('disorder', '0')
+        if self.__reference_system.has_hamiltonian():
+            disorder = self.setting.get('disorder', '0')
             if disorder.isdigit():
                 disorder_counts = int(disorder)
             else:
                 # load file:
-                lines = self.load_file(disorder)
+                lines = string_to_lines(self.load_file(disorder))
                 # check size
-                if len(lines[0]) != len(self.reference_system):
+                if len(lines[0]) != len(self.__reference_system):
                     raise ValueError('size of disorders does not match the Hamiltonian')
                 disorder_counts = len(lines)
                 self.disorders += [np.array(line, dtype=float).reshape(1, -1) for line in lines]
 
-        self.discard_disorders = []
         self.overlap_factors = [100] + [0] * disorder_counts
-        self.overlap_arrays = [np.ones(len(self.reference_system))] + \
-                              [np.zeros(len(self.reference_system))] * disorder_counts
+        self.overlap_arrays = [np.ones(len(self.__reference_system))] + \
+                              [np.zeros(len(self.__reference_system))] * disorder_counts
 
         # generate disordered Hamiltonians
-        self.__systems = [System(self.reference_system, self, i + 1) for i in range(disorder_counts)]
+        self.__systems = [System(self.__reference_system, self, i + 1) for i in range(disorder_counts)]
 
-        self.data_frame = []
-
-        self.SitePos = None
-        if 'pos' in self.setting.Setting:
-            self.load_pos(self.setting.Setting['pos'])
+    def get_reference_system(self):
+        return self.__reference_system
 
     def __iter__(self):
-        yield self.reference_system
+        yield self.__reference_system
         for s in self.__systems:
             yield s
 
@@ -63,19 +82,12 @@ class Project:
     def re_config(self):
         self.config = Config()
 
-    # load file into lines array with no Null component
     def load_file(self, path):
         path = self.input_path(path)
         print("loading file at:\n    {}".format(path))
         with open(path, 'r', encoding='utf-8-sig') as f:
-            lines = f.readlines()
-
-        # split:
-        lines = map(lambda x: re.split('[\s,;]+', x), lines)
-        # remove null string
-        lines = [[x for x in l if x] for l in lines]
-        # remove null line
-        return [l for l in lines if l]
+            file_str = f.read()
+        return file_str
 
     def input_path(self, str1):
         if '/' not in str1:
@@ -95,19 +107,22 @@ class Project:
         return str1
 
     def load_pos(self, path):
-        lines = self.load_file(path)
-        if not self.reference_system.has_hamiltonian():
+        if not path:
+            return
+
+        lines = string_to_lines(self.load_file(path))
+        if not self.__reference_system.has_hamiltonian():
             print('please read the Hamiltonian file first')
             return
 
-        if len(lines) != len(self.reference_system.SiteName):
+        if len(lines) != len(self.__reference_system.SiteName):
             raise ValueError("Number of sites doesn't match")
 
-        self.SitePos = np.zeros((len(self.reference_system), 3), dtype=float)
+        self.SitePos = np.zeros((len(self.__reference_system), 3), dtype=float)
         if len(lines[0]) == 4:
             # site name in .pos
             coordinates = {site: r for site, *r in lines}
-            for i, site in enumerate(self.reference_system.SiteName):
+            for i, site in enumerate(self.__reference_system.SiteName):
                 try:
                     self.SitePos[i] = coordinates[site]
                 except KeyError:
@@ -120,7 +135,7 @@ class Project:
                     self.SitePos[i] = l
                 except ValueError:
                     print("[x, y, z] should be numbers")
-                print(self.reference_system.SiteName[i], self.SitePos[i])
+                print(self.__reference_system.SiteName[i], self.SitePos[i])
         else:
             raise ValueError("[site, x, y, z] should be provided in the position input file")
 
@@ -180,7 +195,7 @@ class Project:
         self.concat().to_csv(raw_file)
 
     def print_log(self, *strs, **kwargs):
-        if 'log' in self.setting.KeyWords:
+        if 'log' in self.setting:
             print(*strs, **kwargs)
 
     def get_output_name(self, str1='_'):
@@ -201,7 +216,7 @@ class Project:
                     print_1_line_stars()
 
                 if options['e'].intersection(judge_ls):
-                    plot.plot_exst(system, allsite='allsite' in self.setting.KeyWords, clx_map=cgm)
+                    plot.plot_exst(system, allsite='allsite' in self.setting, clx_map=cgm)
 
                 dot = options['d'].intersection(judge_ls)
                 ffa = options['F'].intersection(judge_ls)
@@ -226,7 +241,7 @@ class Project:
 
                     if rate:
                         if latex:
-                            alg.print_rate_matrix(cluster[0], pass_int(self.setting.Setting['decimal']))
+                            alg.print_rate_matrix(cluster[0], pass_int(self.setting['decimal']))
                         alg.save_rate(cluster[0], cluster[2], cluster[1])
                         print_1_line_stars()
 
@@ -251,8 +266,8 @@ class Project:
 
             plot.plot_cost(
                 system,
-                assigned_cost=pass_int(self.setting.Setting['cost']),
-                print_marker=self.setting.Setting['marker'] == 'true',
-                y_max=pass_float(self.setting.Setting.get('ymax', '0.')),
-                legend='nolegend' not in self.setting.KeyWords
+                assigned_cost=pass_int(self.setting['cost']),
+                print_marker=self.setting['marker'] == 'true',
+                y_max=pass_float(self.setting.get('ymax', '0.')),
+                legend='nolegend' not in self.setting
             )

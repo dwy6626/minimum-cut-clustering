@@ -6,18 +6,17 @@ from aux import *
 
 
 class Setting:
-    def __init__(self, sys_argv):
+    def __init__(self):
         # now, in 24-hour format
         # %H = 24-hour, %l = 12-hour
         print("Now: " + strftime("%X, %x"))
-        default_name = strftime("%Y%m%d%H%M")
 
         print("Terminal path: ")
         print("  " + os.getcwd(), '\n')
 
         print_1_line_stars()
 
-        self.OptionText = {
+        self.__OptionText = {
             'd': 'Network/CG models visualization utilizing Graphviz',
             'p': 'Time-integrated flux',
             'F': 'FFA flow analysis',
@@ -29,22 +28,28 @@ class Setting:
         }
 
         # Project Options
-        self.KeyWords = []
+        self.__keywords = set()
         self.InputFileName = self.JobName = ''
 
-        self.Setting = copy(DefaultSetting)
+        self.__dict = copy(DefaultSetting)
 
         self.__mrt_param = []
 
-        # initialize
-        option_set = {opt: set() for opt in self.OptionText}
+    def receive_arguments(self, sys_argv):
+        """
+        :param sys_argv: list of strings, command line options
+        :return: output options
+        """
+        default_name = strftime("%Y%m%d%H%M")
+
+        option_set = {opt: set() for opt in self.__OptionText}
         cmd_opt = set()
         clx_opt = set()
         for item in sys_argv:
             if item[0] == '-':
                 opt, details = item[1], item[2:]
                 if opt == '-':
-                    self.KeyWords.append(details)
+                    self.__keywords.add(details)
                     continue
 
                 # options
@@ -52,7 +57,7 @@ class Setting:
                 if opt == 'c':
                     clx_opt.update([x for x in details])
 
-                elif opt in self.OptionText:
+                elif opt in self.__OptionText:
                     cmd_opt.update(opt)
                     option_set[opt] = opt_processing(details[1:-1])
 
@@ -61,7 +66,7 @@ class Setting:
                 k, v, *others = item.split('=')
                 if others:
                     help_message()
-                self.Setting[k] = v
+                self[k] = v
 
             else:
                 if not self.InputFileName:
@@ -71,25 +76,30 @@ class Setting:
                 else:
                     help_message()
 
-        if not self.InputFileName or 'h' in cmd_opt:
+        if 'h' in cmd_opt:
             # help message and exit
-            help_message()
+            help_message(0)
 
         if not self.JobName:
             self.JobName = default_name
 
-        self.__run_opt = option_set, sorted(clx_opt), cmd_opt
-        self.print_all(*self.__run_opt)
+        run_opt = option_set, sorted(clx_opt), cmd_opt
+        self.print_all(*run_opt)
 
-        # plot parameters
-        self.ErrorBarParams = {
-            'capthick': 2.5
-        }
+        # update matplotlib rc from arguments
         mpl_update = {
-            'savefig.format': self.Setting['format'] if self.Setting['format'] in ('ps', 'pdf', 'svg') else 'png',
-            'figure.dpi': pass_int(self.Setting['dpi'], 100)
+            'savefig.format': self['format'] if self['format'] in ('ps', 'pdf', 'svg') else 'png',
+            'figure.dpi': pass_int(self['dpi'], 100)
         }
         mpl.rcParams.update(mpl_update)
+
+        # update the parameters for modified Redfield theory
+        temperature = pass_float(self.get('temperature'))
+        lambda0 = pass_float(self.get('lambda'))
+        gamma0 = pass_float(self.get('gamma'))
+        if temperature > 0 and lambda0 > 0 and gamma0 > 0:
+            self.set_mrt_params([temperature, lambda0, gamma0])
+        return run_opt
 
     def print_all(self, option_set=None, clx_opt=None, cmd_opt=None):
         if not option_set:
@@ -102,19 +112,19 @@ class Setting:
         print('Job name: {}'.format(self.JobName))
 
         print('Settings:')
-        [print('    {}: {}'.format(k, v)) for k, v in self.Setting.items()]
+        [print('    {}: {}'.format(k, v)) for k, v in self.items()]
 
-        if self.KeyWords:
+        if self.__keywords:
             print('Keywords:')
-            [print('    {}'.format(k)) for k in self.KeyWords]
+            [print('    {}'.format(k)) for k in self.__keywords]
             print()
 
         print_set('Receive options', cmd_opt)
         print_set('Clustering method options', clx_opt)
-        [print_set(self.OptionText[k], v) for k, v in option_set.items()]
+        [print_set(self.__OptionText[k], v) for k, v in option_set.items()]
         print()
 
-    def set_mrt_params(self, *params):
+    def set_mrt_params(self, params=None):
         try:
             if len(params) == 3:
                 self.__mrt_param = tuple(map(float, params))
@@ -184,3 +194,18 @@ class Setting:
             else:
                 self.set_temperature()
         return self.__mrt_param[0]
+
+    def __getitem__(self, n):
+        return self.__dict[n]
+
+    def __setitem__(self, k, v):
+        return self.__dict.__setitem__(k, v)
+
+    def get(self, n, default=None):
+        return self.__dict.get(n, default)
+
+    def items(self):
+        return self.__dict.items()
+
+    def __contains__(self, k):
+        return self.__keywords.__contains__(k)

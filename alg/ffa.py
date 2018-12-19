@@ -217,12 +217,12 @@ def flow_analysis(system, cluster=None, draw=False):
     setting = system.back_ptr.setting
     node_ls = system.ExcitonName
 
-    if setting.Setting['init'] in node_ls:
-        source = setting.Setting['init']
+    if setting['init'] in node_ls:
+        source = setting['init']
     else:
-        source = setting.Setting.get('s', node_ls[-1])
+        source = setting.get('s', node_ls[-1])
 
-    target = setting.Setting.get('t', 'sink' if 'CTsink' in setting.KeyWords else node_ls[0])
+    target = setting.get('t', 'sink' if 'CTsink' in setting else node_ls[0])
 
     if cluster is not None:
         network = get_cluster_graph(cluster)

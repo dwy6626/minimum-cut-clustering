@@ -223,7 +223,7 @@ class Map:
 
     def update_cutoff(self, cutoff):
         self.update_info('Cut = ' +
-                         format(cutoff, '.' + str(self.back_ptr.back_ptr.setting.Setting['decimal']) + 'f')
+                         format(cutoff, '.' + str(self.back_ptr.back_ptr.setting['decimal']) + 'f')
                          + ':')
 
     def groups(self):

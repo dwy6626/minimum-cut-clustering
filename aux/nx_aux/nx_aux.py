@@ -10,8 +10,8 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
 
     setting = system.back_ptr.setting
 
-    file_name = plot_name + '_' + str(setting.Setting['cutoff']).replace('.', '')
-    file_format = setting.Setting['format'].lower()
+    file_name = plot_name + '_' + str(setting['cutoff']).replace('.', '')
+    file_format = setting['format'].lower()
     dot_path = system.back_ptr.config.get_graphaviz_dot_path()
     dot_file = file_name + '.dot'
     image_file = file_name + '.' + file_format
@@ -19,7 +19,7 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
     # wrap
     graph = ref_graph.copy()
     graph.graph['ranksep'] = .7
-    graph.graph['dpi'] = pass_int(setting.Setting['dpi'])
+    graph.graph['dpi'] = pass_int(setting['dpi'])
 
     # node color
     if rc_order is not None:
@@ -36,8 +36,8 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
 
     # wrap edges
     max_flow_ratio = FFAName == label
-    decimal = pass_int(setting.Setting['decimal'])
-    cutoff = pass_float(setting.Setting['cutoff'])
+    decimal = pass_int(setting['decimal'])
+    cutoff = pass_float(setting['cutoff'])
 
     labels = []
     for s, t, cap in ref_graph.edges(data=label):
@@ -47,7 +47,7 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
             continue
 
         # provide a special rule for LHCII monomer
-        if 'LHC8' in setting.KeyWords:
+        if 'LHC8' in setting:
             LHC_sp_rule = (s == '8' and cap > 0.1 ** decimal / 2)
         else:
             LHC_sp_rule = False
@@ -93,7 +93,7 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
             dic['weight'] = dic['penwidth']
 
             # ranking by rc_order/energies
-            if 'norankdown' not in setting.KeyWords:
+            if 'norankdown' not in setting:
                 if rc_order is not None:
                     change = rc_order.index(s) < rc_order.index(t)
                 else:
@@ -105,7 +105,7 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
 
             # external label
             # the mechanism need to be optimized
-            if 'xlabel' in setting.KeyWords:
+            if 'xlabel' in setting:
                 lab_dict = {}
                 for s, t, lab in [(s, t, lab) for s, t, lab in graph.edges(data='label') if lab]:
                     graph[s][t]['taillabel'] = lab

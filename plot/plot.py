@@ -305,7 +305,7 @@ def plot_tf(system, clx_map=None, cutoff=0.1):
     color_dict = dict()
     if clx_map:
         # sort clusters by minimum energy member:
-        ref_energies = np.array(system.back_ptr.reference_system.ExcitonEnergies)
+        ref_energies = np.array(system.get_original().ExcitonEnergies)
         min_energies = [min((ref_energies[system.ExcitonName.index(n)] for n in cluster)) for cluster in clx_map.groups()]
         groups = [s for _, s in sorted(zip(min_energies, clx_map.groups()))]
 
@@ -319,7 +319,7 @@ def plot_tf(system, clx_map=None, cutoff=0.1):
         color_number = len(system)
         # sort color by the reference system
         for n in system.ExcitonName:
-            color_dict[n] = len(system) - system.back_ptr.reference_system.ExcitonName.index(n) - 1
+            color_dict[n] = len(system) - system.get_original().ExcitonName.index(n) - 1
 
     color_array = []
     cmap2 = colormap(color_number)
@@ -535,7 +535,7 @@ def plot_exst(system, cutoff=0.1, clx_map=None, allsite=False):
 
     if clx_map:
         plot_name = '{}_{}c_'.format(clx_map.method, len(clx_map))
-        ref_energies = np.array(system.back_ptr.reference_system.ExcitonEnergies)
+        ref_energies = np.array(system.get_original().ExcitonEnergies)
         min_energies = [min((ref_energies[system.ExcitonName.index(n)] for n in cluster)) for cluster in clx_map.groups()]
         iter_states = [s for _, s in sorted(zip(min_energies, clx_map.groups()))]
     else:

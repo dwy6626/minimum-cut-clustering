@@ -7,7 +7,7 @@ from aux import *
 def input_map_clustering(system):
     # format: 1,2|3,4|5,6|7
     cluster_map = system.get_new_map('inp')
-    map_ls = system.back_ptr.setting.Setting['map'].split('|')
+    map_ls = system.back_ptr.setting['map'].split('|')
 
     clx_ls = []
     for clx in map_ls:

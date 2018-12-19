@@ -32,19 +32,10 @@ def k_means_like(system, power=2):
         _cluster_map.method = job_name
         _cluster_map.update_info(None)
 
-        if 'log' in system.back_ptr.setting.KeyWords:
+        if 'log' in system.back_ptr.setting:
             print('initial: ', end='')
             print(_cluster_map)
         return _cluster_map
-
-    def var_cal_gakm(_map):
-        r = 0
-        for g in _map.groups():
-            sub_sum = 0
-            for _m, _n in combinations(g, 2):
-                sub_sum += aux_matrix[_m][_n]
-            r += sub_sum / len(g) ** 2 / 2
-        return r
 
     def var_cal(_map):
         r = 0
@@ -56,23 +47,6 @@ def k_means_like(system, power=2):
             if r > VarNow:
                 return float('inf')
         return r
-
-    def _new_random_map(_nc, job_name):
-        node_ls = system.ExcitonName
-        # generate a array of graph size
-        # with random numbers 0 to _nc-1
-        while 1:
-            seeds = np.ceil(np.random.rand(len(system)) * _nc).astype('int') - 1
-            if len(np.unique(seeds)) == _nc:
-                break
-
-        _cluster_map = system.get_new_map(job_name, one_group=False)
-        for j in range(_nc):
-            group = []
-            for k in np.where(seeds == j)[0]:
-                group.append(node_ls[k])
-            _cluster_map.group_up(group)
-        return _cluster_map
 
     # a new KM-like function:
     def __clx(_nc, epsilon=0):
@@ -180,7 +154,7 @@ def k_means_like(system, power=2):
     # replace inf with this value
     aux_matrix.values[aux_matrix == -1] = KM_inf
 
-    cost = pass_int(system.back_ptr.setting.Setting['cost'])
+    cost = pass_int(system.back_ptr.setting['cost'])
     iter_range = range(2, min([len(system), 1+int(cost)]))
 
     global VarNow

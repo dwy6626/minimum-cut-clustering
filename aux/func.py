@@ -31,6 +31,17 @@ DefaultSetting = {
 # ============================================================
 
 
+# convert string into lines array with no Null component
+def string_to_lines(str1):
+    # split:
+    lines = str1.split('\n')
+    lines = map(lambda x: re.split('[\s,;]+', x), lines)
+    # remove null string
+    lines = [[x for x in l if x] for l in lines]
+    # remove null line
+    return [l for l in lines if l]
+
+
 # Print many stars
 def print_stars():
     for i in range(72):
@@ -46,11 +57,10 @@ def print_1_line_stars():
 
 
 # Print help message
-def help_message():
+def help_message(exit_id=1):
     from os import popen
-    print('Preparing help message...\n')
     print(popen('cat doc/usage').read())
-    exit(1)
+    exit(exit_id)
 
 
 # format: -n[1,3,6,7-11,n,c]
@@ -103,28 +113,30 @@ def H_suffix(disorder_id):
 
 
 def pass_float(str1, default=0.):
-    if isinstance(str1, float):
-        return str1
-    if isinstance(str1, int):
-        return float(str1)
-    p = re.compile('^\d+(\.\d+)?$')
-    match = p.match(str1)
-    if match:
-        return float(match.group(0))
-    if str1 in DefaultSetting:
-        return float(DefaultSetting[str1])
+    if str1 is not None:
+        if isinstance(str1, float):
+            return str1
+        if isinstance(str1, int):
+            return float(str1)
+        p = re.compile('^\d+(\.\d+)?$')
+        match = p.match(str1)
+        if match:
+            return float(match.group(0))
+        if str1 in DefaultSetting:
+            return float(DefaultSetting[str1])
     return default
 
 
 def pass_int(str1, default=0):
-    if isinstance(str1, int):
-        return str1
-    if isinstance(str1, float):
-        return int(str1)
-    if str1.isdigit():
-        return int(str1)
-    if str1 in DefaultSetting:
-        return int(DefaultSetting[str1])
+    if str1 is not None:
+        if isinstance(str1, int):
+            return str1
+        if isinstance(str1, float):
+            return int(str1)
+        if str1.isdigit():
+            return int(str1)
+        if str1 in DefaultSetting:
+            return int(DefaultSetting[str1])
     return default
 
 

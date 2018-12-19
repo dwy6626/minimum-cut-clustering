@@ -10,7 +10,7 @@ import plot
 
 
 class System:
-    def __init__(self, reference, back_ptr, index=0):
+    def __init__(self, reference, back_ptr, index=0, is_rate_matrix=False, additional_hamiltonian_string=''):
         self.__NumberSite = 0
 
         # should align with Hamiltonian
@@ -49,27 +49,27 @@ class System:
             self.generate_disordered_hamiltonian(reference)
             return
 
-        file_type = reference.split('.')[-1]
-        if file_type.lower() == 'h':
-            self.load_h(reference)
-            self.ExcitonName = list(map(str, range(1, len(self) + 1)))
-            self.RateConstantMatrix = pd.DataFrame(
-                alg.modified_Redfield_theory_calculation(self.Hamiltonian, *self.back_ptr.setting.get_mrt_params()),
-                columns=self.ExcitonName, index=self.ExcitonName
-            )
-
-        elif file_type == 'p':
-            # should do something here
-            pass
-
+        elif isinstance(reference, str):
+            if is_rate_matrix:
+                self.load_key(reference)
+                # load H of the same system:
+                self.load_h(additional_hamiltonian_string)
+            else:
+                self.load_h(reference)
+                self.ExcitonName = list(map(str, range(1, len(self) + 1)))
+                self.RateConstantMatrix = pd.DataFrame(
+                    alg.modified_Redfield_theory_calculation(self.Hamiltonian, *self.back_ptr.setting.get_mrt_params()),
+                    columns=self.ExcitonName, index=self.ExcitonName
+                )
         else:
-            self.load_key(reference)
-            # load H of the same system:
-            self.load_h(self.back_ptr.setting.Setting.get('H'))
+            raise KeyError('should receive string or a reference system')
+
+    def get_original(self):
+        return self.back_ptr.get_reference_system()
 
     def generate_disordered_hamiltonian(self, reference):
         # standard deviation
-        sd = pass_float(self.back_ptr.setting.Setting.get('sd', 100))
+        sd = pass_float(self.back_ptr.setting.get('sd', 100))
         while True:
             if len(self.back_ptr.disorders) > self.__index:
                 disorders = self.back_ptr.disorders[self.__index]
@@ -157,7 +157,7 @@ class System:
 
             # overlap factor: the average overlap
             overlap_factor = sum(corres_overlap_array) / len(corres_overlap_array) * 100
-            if 'log' in self.back_ptr.setting.KeyWords:
+            if 'log' in self.back_ptr.setting:
                 print('corresponding overlap with original states:', corres_overlap_array)
                 print('the total overlap factors: {:.2f}%'.format(overlap_factor))
 
@@ -190,11 +190,11 @@ class System:
 
         return
 
-    def load_h(self, path):
-        if not path:
+    def load_h(self, argv):
+        if not argv:
             return
 
-        lines = self.back_ptr.load_file(path)
+        lines = string_to_lines(argv)
 
         extend_with_identity = False
         if len(self):
@@ -255,7 +255,7 @@ class System:
         self.back_ptr.print_log('U square:')
         self.back_ptr.print_log(self.EigenVectors ** 2)
 
-    def load_key(self, path):
+    def load_key(self, argv):
         def in_format_error():
             print()
             print('expected format:')
@@ -264,7 +264,7 @@ class System:
             print('    Rate Constant Matrix (Square Matrix)')
             raise ValueError('unexpected input file format')
 
-        lines = self.back_ptr.load_file(path)
+        lines = string_to_lines(argv)
         tmp = []
         for l in lines:
             tmp.extend(l)
@@ -304,7 +304,7 @@ class System:
         self.RateConstantMatrix[:] -= np.diag(np.sum(self.RateConstantMatrix.values, axis=0))
 
         # sorted the excitons
-        if 'labelorder' in self.back_ptr.setting.KeyWords:
+        if 'labelorder' in self.back_ptr.setting:
             for n in self.ExcitonName.copy():
                 if not n.isdigit():
                     sort_list = zip(*sorted(zip(self.ExcitonName, self.ExcitonEnergies)))
@@ -374,7 +374,7 @@ class System:
         if self.get_index() == 0:
             ref_energies = energies
         else:
-            ref_energies = np.array(self.back_ptr.reference_system.ExcitonEnergies)
+            ref_energies = np.array(self.get_original().ExcitonEnergies)
 
         groups = clx_map.groups()
 
@@ -480,11 +480,11 @@ class System:
 
         # setup variables
         size = len(rate.keys())
-        propagate_time = pass_int(setting.Setting['time'])
-        time_grid = pass_int(setting.Setting['grid'])
-        spline_size = pass_int(setting.Setting['spline'])
+        propagate_time = pass_int(setting['time'])
+        time_grid = pass_int(setting['grid'])
+        spline_size = pass_int(setting['spline'])
         time_sequence = np.linspace(0, propagate_time, time_grid)
-        divide = pass_int(setting.Setting.get('divide', 100))
+        divide = pass_int(setting.get('divide', 100))
         print(
             'dynamics propagation setting:\n'
             '  propagate time: {} ps\n'
@@ -495,7 +495,7 @@ class System:
         # get initial population:
 
         # equal partitions
-        init_option = setting.Setting['init']
+        init_option = setting['init']
         if init_option.lower() in ['equally', 'eq', 'equipartition', 'same']:
             pop = np.ones(len(self)) / len(self)
         # boltzmann partitions:
@@ -551,17 +551,17 @@ class System:
         print()
 
         # propagation
-        if 'log' in setting.KeyWords:
+        if 'log' in setting:
             print('start dynamics calculation')
             timer_start = timeit.default_timer()
 
         pop_seq = alg.propagate(
             pop.reshape(-1, 1), rate.values, time_sequence,
-            option=setting.Setting['propagate'] == 'poorman',
-            print_pop='log' in setting.KeyWords
+            option=setting['propagate'] == 'poorman',
+            print_pop='log' in setting
         )
 
-        if 'log' in setting.KeyWords:
+        if 'log' in setting:
             timer_end = timeit.default_timer()
             print('propagate time {}'.format(timer_end - timer_start))
 
@@ -585,8 +585,8 @@ class System:
             self.__pop = pop_seq
 
         # get more plot settings
-        ymax = pass_float(setting.Setting.get('ymax', '0.'))
-        xmax = pass_float(setting.Setting.get('xmax', '0.'))
+        ymax = pass_float(setting.get('ymax', '0.'))
+        xmax = pass_float(setting.get('xmax', '0.'))
 
         # animation
         if create_pop_animation and not is_clustered:
@@ -594,11 +594,11 @@ class System:
                 raise KeyError('please provide Hamiltonian and Cartesian coordinates')
             plot.population_animatation(
                 pop_seq, self.back_ptr.SitePos, self.SiteName,
-                self.Hamiltonian.transform2.T,
+                (self.EigenVectors ** 2).T,
                 time_sequence, self.get_output_name(),
                 ps1='PSI' in setting.InputFileName,
-                dpi=pass_int(setting.Setting['dpi']),
-                allsite='allsite' in setting.KeyWords
+                dpi=pass_int(setting['dpi']),
+                allsite='allsite' in setting
             )
 
         # spline
@@ -620,12 +620,12 @@ class System:
                 self.back_ptr.print_log('calculate flux')
                 integrated_flux_matrix = alg.get_integrated_flux(
                     pop_seq2, rate, time_sequence2,
-                    norm=pass_int(setting.Setting.get('multiply', 1)),
-                    plot_details='log' in setting.KeyWords,
+                    norm=pass_int(setting.get('multiply', 1)),
+                    plot_details='log' in setting,
                     plot_name=plot_name,
                     divide=divide,
                     y_max=ymax, x_max=xmax,
-                    legend='nolegend' not in setting.KeyWords
+                    legend='nolegend' not in setting
                 )
                 graph = nx.DiGraph()
                 graph.add_nodes_from(
@@ -653,9 +653,6 @@ class System:
             if divide < min(9, size):
                 cmap = plot.DefaultMap[:divide] * ((size - 1) // divide + 1)
             else:
-                # if 'CTsink' in inp.KeyWords:
-                #     cmap = aux.colormap(size - 1) + [[102 / 256, 102 / 256, 102 / 256]]
-                # else:
                 cmap = plot.colormap(size)
                 cmap.reverse()
 
@@ -676,20 +673,20 @@ class System:
                     pop_seq, time_sequence, pop_names, axes_names, plot_name,
                     series2=pop_org, divide=divide, custom_colormap=cmap,
                     y_max=ymax, x_max=xmax,
-                    legend='nolegend' not in setting.KeyWords,
+                    legend='nolegend' not in setting,
                 )
                 return
 
             # basis transform for original network
             # if H_eff is provided
-            if self.has_hamiltonian() and 'site' in setting.KeyWords:
+            if self.has_hamiltonian() and 'site' in setting:
                 print('--site: change to site basis')
                 pop_seq_site = np.dot(self.EigenVectors ** 2, pop_seq)
                 plot.plot_series(
                     pop_seq_site, time_sequence, self.SiteName, axes_names, plot_name + '_Site',
                     divide=divide, custom_colormap=cmap,
                     y_max=ymax, x_max=xmax,
-                    legend='nolegend' not in setting.KeyWords
+                    legend='nolegend' not in setting
                 )
 
             # Plot full network
@@ -697,6 +694,6 @@ class System:
                 pop_seq, time_sequence, nodes, axes_names, plot_name,
                 divide=divide, custom_colormap=cmap,
                 y_max=ymax, x_max=xmax,
-                legend='nolegend' not in setting.KeyWords
+                legend='nolegend' not in setting
             )
         return rt

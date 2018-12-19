@@ -77,6 +77,11 @@ DICTIONARIES
     H=[File]
         Use effective Hamiltonian to transform the exciton basis results into site basis results
 
+    temperature=[float], lambda=[float], gamma=[float]
+        parameters for the modified Redfield theory and bath
+        lambda: reorganization energy (cm-1)
+        gamma: cut-off frequency (cm-1)
+
     pos=[File]
         Format: [Site Name] [x] [y] [z] \n
 

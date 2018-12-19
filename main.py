@@ -18,8 +18,21 @@ from sys import argv
 import alg
 import plot
 
-Project = project.Project(argv[1:])
-opt_set, cluster_opt, cmd_opt = Project.setting._Setting__run_opt
+Setting = setting.Setting()
+opt_set, cluster_opt, cmd_opt = Setting.receive_arguments(argv[1:])
+
+Project = project.Project(Setting)
+input_fname = Setting.InputFileName
+if not input_fname:
+    print('Warning: please specify the input file position\n')
+    aux.help_message()
+
+Project.build_reference_system(
+    input_fname,
+    is_rate_matrix=input_fname.split('.')[-1].lower() != 'h',
+    as_file_path=True,
+    additional_hamiltonian_load=Setting.get('H')
+)
 
 print('Job started.\n')
 aux.print_1_line_stars()
@@ -30,15 +43,15 @@ aux.print_1_line_stars()
 
 # check if E1 > E2 but flow back
 if 'k' in cmd_opt:
-    alg.check_rate(Project.reference_system)
+    alg.check_rate(Project.get_reference_system())
     aux.print_1_line_stars()
 
-judge_set = {'n', len(Project.reference_system)}
+judge_set = {'n', len(Project.get_reference_system())}
 
 for system in Project:
     # option -l print latex code (Hamiltonian, rate matrix)
     if 'l' in cmd_opt:
-        alg.print_latex_matrix(system, decimal=aux.pass_int(Project.setting.Setting['decimal']))
+        alg.print_latex_matrix(system, decimal=aux.pass_int(Setting['decimal']))
 
     # option -I: site-exciton corresponding diagram
     if system.has_hamiltonian() and 'n' in opt_set['I']:
@@ -46,7 +59,7 @@ for system in Project:
 
     # option -e: plot exciton population on each site
     if judge_set.intersection(opt_set['e']):
-        plot.plot_exst(system, allsite='allsite' in Project.setting.KeyWords)
+        plot.plot_exst(system, allsite='allsite' in Project.setting)
 
     # option -b: find bottleneck index
     if 'b' in cmd_opt:
@@ -93,7 +106,7 @@ for system in Project:
     # ============================================================
 
     # manual clustering
-    if Project.setting.Setting.get('map', False):
+    if Setting.get('map', False):
         alg.input_map_clustering(system)
         aux.print_1_line_stars()
 
