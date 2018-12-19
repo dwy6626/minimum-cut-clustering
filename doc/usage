@@ -1,10 +1,10 @@
 NAME
-    Minimum-Cut Clustering - a python3 tool to analyze an exciton network in photosynthesis systems
+    Minimum-Cut Clustering - a python tool to analyze exciton networks in photosynthetic systems
 
 SYNOPSIS
     python3 main.py [file] [job name] -[options] [dictionary]=[value] --[keywords]
 
-NOT
+NOTE
     The first argument without '=' and '-' will be the input file path
 
     The second argument without '=' and '-' will be the job name

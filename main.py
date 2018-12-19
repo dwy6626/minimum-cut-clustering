@@ -8,7 +8,6 @@
 
 from obj import *
 import aux
-Configuration = config.Config()
 
 
 # ============================================================
@@ -19,9 +18,10 @@ from sys import argv
 import alg
 import plot
 
-Project = project.Project(argv[1:], Configuration)
+Project = project.Project(argv[1:])
 opt_set, cluster_opt, cmd_opt = Project.setting._Setting__run_opt
 
+print('Job started.\n')
 aux.print_1_line_stars()
 
 # ============================================================

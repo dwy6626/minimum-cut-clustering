@@ -3,4 +3,5 @@ input
 output
 .mincut_configure
 .idea
+venv
 

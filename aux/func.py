@@ -1,6 +1,6 @@
 # import build-in modules
-from time import strftime
 import re
+from itertools import combinations, permutations, count
 
 
 # import 3rd party modules
@@ -51,10 +51,6 @@ def help_message():
     print('Preparing help message...\n')
     print(popen('cat doc/usage').read())
     exit(1)
-
-
-def time_string():
-    return strftime("%Y%m%d%H%M")
 
 
 # format: -n[1,3,6,7-11,n,c]

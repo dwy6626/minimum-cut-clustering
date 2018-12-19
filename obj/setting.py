@@ -6,12 +6,16 @@ from aux import *
 
 
 class Setting:
-    def __init__(self, sys_argv, config):
-        # Set output options
-        np.set_printoptions(linewidth=150)
-        np.set_printoptions(formatter={'float': lambda x: "{:>8.2f}".format(x)})
-        pd.set_option('display.max_columns', 10)
-        pd.set_option('display.width', 100)
+    def __init__(self, sys_argv):
+        # now, in 24-hour format
+        # %H = 24-hour, %l = 12-hour
+        print("Now: " + strftime("%X, %x"))
+        default_name = strftime("%Y%m%d%H%M")
+
+        print("Terminal path: ")
+        print("  " + os.getcwd(), '\n')
+
+        print_1_line_stars()
 
         self.OptionText = {
             'd': 'Network/CG models visualization utilizing Graphviz',
@@ -23,9 +27,6 @@ class Setting:
             'M': 'Propagate population dynamics',
             'e': 'plot exciton population on each site'
         }
-
-        # system info
-        self.config = config
 
         # Project Options
         self.KeyWords = []
@@ -75,7 +76,7 @@ class Setting:
             help_message()
 
         if not self.JobName:
-            self.JobName = time_string()
+            self.JobName = default_name
 
         self.__run_opt = option_set, sorted(clx_opt), cmd_opt
         self.print_all(*self.__run_opt)

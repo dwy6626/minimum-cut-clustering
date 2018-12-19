@@ -2,6 +2,7 @@
 from aux import *
 from .system import System
 from .setting import Setting
+from .config import Config
 import alg
 import plot
 
@@ -10,10 +11,14 @@ import plot
 
 
 class Project:
-    def __init__(self, argv, config):
+    def __init__(self, setting, config=None):
         self.col = ['Method', 'N', 'CGM', 'OverlapFactor', 'PopDiff']
 
-        self.setting = Setting(argv, config)
+        self.setting = Setting(setting)
+
+        if config is None:
+            config = Config()
+        self.config = config
 
         self.reference_system = System(self.setting.InputFileName, self)
 
@@ -55,6 +60,9 @@ class Project:
     def __repr__(self):
         return repr(self.concat())
 
+    def re_config(self):
+        self.config = Config()
+
     # load file into lines array with no Null component
     def load_file(self, path):
         path = self.input_path(path)
@@ -70,19 +78,18 @@ class Project:
         return [l for l in lines if l]
 
     def input_path(self, str1):
-        config = self.setting.config
         if '/' not in str1:
             try:
                 with open(str1) as f:
                     pass
             except:
                 try:
-                    with open(config.input_path(str1)) as f:
-                        str1 = config.input_path(str1)
+                    with open(self.config.input_path(str1)) as f:
+                        str1 = self.config.input_path(str1)
                 except:
                     try:
-                        with open(config.output_path(str1)) as f:
-                            str1 = config.output_path(str1)
+                        with open(self.config.output_path(str1)) as f:
+                            str1 = self.config.output_path(str1)
                     except FileExistsError:
                         print('input file', str1, 'does not exist')
         return str1
@@ -177,7 +184,7 @@ class Project:
             print(*strs, **kwargs)
 
     def get_output_name(self, str1='_'):
-        return self.setting.config.output_path(self.setting.JobName + str1)
+        return self.config.output_path(self.setting.JobName + str1)
 
     # output controller
     def output_cluster_results(self, options, latex=False, cost=False):
