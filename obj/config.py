@@ -2,15 +2,24 @@
 from aux import *
 
 
+CheckFile = '.mincut_configure'
+
+
 # ============================================================
 
 
 class Config:
     def __init__(self):
+        # Set output options
+        np.set_printoptions(linewidth=150)
+        np.set_printoptions(formatter={'float': lambda x: "{:>8.2f}".format(x)})
+        pd.set_option('display.max_columns', 10)
+        pd.set_option('display.width', 100)
+
         # Global Variables
         self.__OutPutFolder = 'output/'
         self.__InPutFolder = 'input/'
-        self.DotPath = ''
+        self.__DotPath = ''
         self.__mpl_dict = {
             "font.family": 'Arial',
             'font.size': 30,
@@ -28,94 +37,11 @@ class Config:
         self.config()
 
     def config(self):
-        from time import strftime
-
-        # now, in 24-hour format
-        # %H = 24-hour, %l = 12-hour
-        print("Now: " + strftime("%X, %x"))
-
-        print("Terminal path: ")
-        print("  " + os.getcwd(), '\n')
-
-        # check packages:
-        checked_file = '.mincut_configure'
-        env_checked = os.popen('ls ' + checked_file).read()
-        if not env_checked:
-
-            print("Check required packages:")
-            requirements = {
-                'networkx': '2.1',
-                'pydot': '1.2.3',
-                'scikit-learn': '0.20.1',
-                'matplotlib': '2.2.2',
-                'pandas': '0.22.0',
-                'scipy': '1.0.0',
-            }
-
-            import pip
-            from pkg_resources import parse_version
-            if parse_version(pip.__version__) > parse_version('9.0.3'):
-                from pip._internal.utils.misc import get_installed_distributions
-                installed_packages = get_installed_distributions()
-            else:
-                installed_packages = pip.get_installed_distributions()
-
-            for pkg in installed_packages:
-                ver = requirements.get(pkg.key, None)
-                if ver is not None:
-                    chk = 'outdated'
-                    if parse_version(ver) <= parse_version(pkg.version):
-                        chk = 'ok'
-                        requirements.pop(pkg.key)
-                    print('  {:<25}{:<10}    {:10}'.format(pkg.key, pkg.version, chk))
-
-            if requirements:
-                print("\nplease use pip to install the following requirements")
-                for pkg, ver in requirements.items():
-                    print(" ", pkg, '>=', ver)
-                exit(1)
-            else:
-                print('All requirements installed\n')
-
-            # check graphviz:
-            print("Check graphviz: ")
-            dot_path = os.popen('which dot').read()
-
-            if not dot_path:
-                print('  which dot not found, ')
-                print('  please input the path of your dot, ')
-                dot_path = input('  or input enter to exit.')
-
-                if dot_path:
-
-                    try:
-                        dot_ver = os.popen(dot_path + ' -V').read()
-                    except:
-                        print('  path error')
-                        path_exit()
-                else:
-                    path_exit()
-
-            else:
-                print("  " + dot_path)
-
-            with open(checked_file, 'w') as f:
-                f.write(dot_path)
-        else:
-            with open(checked_file, 'r') as f:
-                dot_path = f.read()
-
-        self.DotPath = dot_path.replace('\n', '')
-        print_1_line_stars()
-
         # plot setting:
         self.update_matplotlibrc()
 
         # check output folder
         self.check_output()
-
-        print('Environment checking： pass')
-        print('Job started.\n')
 
     def output_path(self, job):
         return self.__OutPutFolder + job
@@ -144,6 +70,42 @@ class Config:
         for k, v in self.__mpl_dict.items():
             print('    {}: {}'.format(k, v))
         mpl.rcParams.update(self.__mpl_dict)
+
+    def get_graphaviz_dot_path(self):
+        if not self.__DotPath:
+            dot_path_file = os.popen('ls ' + CheckFile).read()
+            if not dot_path_file:
+                # check graphviz:
+                print("Check graphviz: ")
+                dot_path = os.popen('which dot').read()
+
+                if not dot_path:
+                    Warning('  which dot: dot not found, ')
+                    print('  please input the path of your dot, ')
+                    dot_path = input('  or input enter to exit.')
+
+                    if dot_path:
+
+                        try:
+                            dot_ver = os.popen(dot_path + ' -V').read()
+                        except:
+                            print('  path error')
+                            path_exit()
+                    else:
+                        path_exit()
+
+                else:
+                    print("  " + dot_path)
+
+                with open(CheckFile, 'w') as f:
+                    f.write(dot_path)
+            else:
+                with open(CheckFile, 'r') as f:
+                    dot_path = f.read()
+
+            self.__DotPath = dot_path.replace('\n', '')
+
+        return self.__DotPath
 
 
 # ============================================================

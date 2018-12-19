@@ -74,66 +74,6 @@ def k_means_like(system, power=2):
             _cluster_map.group_up(group)
         return _cluster_map
 
-    def __ga_km(_nc, n_run=5, n_generation=30, n_pool=20, p_mutation1=.8, p_mutation2=.97, p_replace=.8):
-        r = []
-        for run in range(n_run):
-            job_name = 'GA_KM_{}'.format(run)
-
-            # initialize pool
-            r.append([])
-            p_mut = p_mutation1
-            pool = []
-            for _ in range(n_pool):
-                pool.append(_new_random_map(_nc, job_name))
-
-            var_of_pool = [var_cal_gakm(m) for m in pool]
-            node_ls = system.ExcitonName
-
-            r[-1].append(var_of_pool)
-
-            for generation in range(n_generation):
-                # selection with probability proportional to fitness
-                fit_of_pool = 1/np.array(var_of_pool)
-                selected_id = np.random.choice(range(n_pool), n_pool, p=fit_of_pool/np.sum(fit_of_pool))
-                selected = [pool[i].copy() for i in selected_id]
-
-                # a simple crossover:
-                # no idea so jump
-
-                # mutation
-                for m in selected:
-                    while 1:
-                        if np.random.rand() < p_mut:
-                            break
-                        chosen_n = node_ls[np.random.randint(0, len(system))]
-                        groups = m.groups()
-                        groups.remove(m[chosen_n])  # prevent effortless move
-                        m.move_and_kick(chosen_n, groups[np.random.randint(len(groups))])
-
-                # comes some foreigner
-                while 1:
-                    if np.random.rand() < p_replace:
-                        break
-                    selected.append(_new_random_map(_nc, job_name))
-
-                # kill
-                # remain the least var
-                var_of_selected = [var_cal_gakm(m) for m in selected]
-                var_of_pool, pool = zip(*sorted(zip(var_of_pool + var_of_selected, pool + selected),
-                                                key=lambda x: x[0])[:n_pool])
-                var_of_pool, pool = list(var_of_pool), list(pool)
-                r[-1].append(var_of_pool)
-
-                # variance control
-                if len(np.unique(var_of_pool)) < 0.25 * n_pool:
-                    p_mut = p_mutation2
-                else:
-                    p_mut = p_mutation1
-
-            # for m in pool:
-            pool[0].save()
-        return r
-
     # a new KM-like function:
     def __clx(_nc, epsilon=0):
         job_name = 'KM'

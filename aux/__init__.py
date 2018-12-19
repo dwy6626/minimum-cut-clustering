@@ -5,7 +5,7 @@ from copy import deepcopy, copy
 import pickle as pk
 import timeit
 from functools import reduce
-from itertools import combinations, permutations, count
+from time import strftime
 
 
 # import 3rd party modules

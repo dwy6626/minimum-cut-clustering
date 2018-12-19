@@ -12,7 +12,7 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
 
     file_name = plot_name + '_' + str(setting.Setting['cutoff']).replace('.', '')
     file_format = setting.Setting['format'].lower()
-    dot_path = setting.config.DotPath
+    dot_path = system.back_ptr.config.get_graphaviz_dot_path()
     dot_file = file_name + '.dot'
     image_file = file_name + '.' + file_format
 

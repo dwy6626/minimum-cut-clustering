@@ -142,14 +142,13 @@ class MinCutTree:
     def draw(self):
         file_name = self.back_ptr.get_output_name('Tree')
         file_format = self.back_ptr.back_ptr.setting.Setting['format'].lower()
-        dot_path = self.back_ptr.back_ptr.setting.config.DotPath
+        dot_path = self.back_ptr.back_ptr.config.get_graphaviz_dot_path()
 
         for run_name, norm in self.run(file_name):
             dot_file = run_name + '.dot'
             image_file = run_name + '.' + file_format
             print('Plot the min-cut binary tree into ' + image_file)
             self.__to_dot(dot_file, norm)
-
             os.system(dot_path + " -T" + file_format + " " + dot_file + " -o " + image_file)
             print('write dot file:', dot_file)
 
