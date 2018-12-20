@@ -1,4 +1,4 @@
-from aux import *
+from lib import *
 from numpy.random import randint
 
 

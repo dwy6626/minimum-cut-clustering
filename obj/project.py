@@ -1,5 +1,5 @@
 # import local modules
-from aux import *
+from lib import *
 from .system import System
 from .config import Config
 import alg

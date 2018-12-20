@@ -1,5 +1,5 @@
 import alg
-from aux import *
+from lib import *
 import plot
 
 NormTemplate = '"true" or "false" or "both"'

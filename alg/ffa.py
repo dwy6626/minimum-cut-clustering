@@ -5,7 +5,7 @@
 # BSD license.
 
 
-from aux import *
+from lib import *
 
 
 # Global Variables

@@ -1,5 +1,5 @@
 # import local modules
-from aux import *
+from lib import *
 
 
 CheckFile = '.mincut_configure'

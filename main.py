@@ -7,7 +7,7 @@
 
 
 from obj import *
-import aux
+import lib
 
 
 # ============================================================
@@ -25,7 +25,7 @@ Project = project.Project(Setting)
 input_fname = Setting.InputFileName
 if not input_fname:
     print('Warning: please specify the input file position\n')
-    aux.help_message()
+    lib.help_message()
 
 Project.build_reference_system(
     input_fname,
@@ -35,7 +35,7 @@ Project.build_reference_system(
 )
 
 print('Job started.\n')
-aux.print_1_line_stars()
+lib.print_1_line_stars()
 
 # ============================================================
 # OUTPUT: NETWORK
@@ -44,14 +44,14 @@ aux.print_1_line_stars()
 # check if E1 > E2 but flow back
 if 'k' in cmd_opt:
     alg.check_rate(Project.get_reference_system())
-    aux.print_1_line_stars()
+    lib.print_1_line_stars()
 
 judge_set = {'n', len(Project.get_reference_system())}
 
 for system in Project:
     # option -l print latex code (Hamiltonian, rate matrix)
     if 'l' in cmd_opt:
-        alg.print_latex_matrix(system, decimal=aux.pass_int(Setting['decimal']))
+        alg.print_latex_matrix(system, decimal=lib.pass_int(Setting['decimal']))
 
     # option -I: site-exciton corresponding diagram
     if system.has_hamiltonian() and 'n' in opt_set['I']:
@@ -64,20 +64,20 @@ for system in Project:
     # option -b: find bottleneck index
     if 'b' in cmd_opt:
         alg.bottleneck_rate(system)
-        aux.print_1_line_stars()
+        lib.print_1_line_stars()
 
     # option -d: draw network
     if judge_set.intersection(opt_set['d']):
         print('Start plotting original network')
-        aux.nx_aux.nx_graph_draw(
+        lib.nx_aux.nx_graph_draw(
             system.get_graph(), system, system.get_plot_name() + 'Rate', rc_order=system.ExcitonName
         )
-        aux.print_1_line_stars()
+        lib.print_1_line_stars()
 
     # option -F: FFA flow decomposition
     if judge_set.intersection(opt_set['F']):
         alg.flow_analysis(system, draw=True)
-        aux.print_1_line_stars()
+        lib.print_1_line_stars()
 
     # option -r: save rate matrix
     if judge_set.intersection(opt_set['r']):
@@ -86,7 +86,7 @@ for system in Project:
             save_name=system.get_plot_name(),
             energies=system.ExcitonEnergies,
         )
-        aux.print_1_line_stars()
+        lib.print_1_line_stars()
 
     # option -M: dynamics!
     # option -p: time-integrated flux
@@ -99,7 +99,7 @@ for system in Project:
             flux=dynamics_opt[1],
             create_pop_animation=dynamics_opt[2]
         )
-        aux.print_1_line_stars()
+        lib.print_1_line_stars()
 
     # ============================================================
     # OUTPUT: COARSE GRAINED MODELS
@@ -108,7 +108,7 @@ for system in Project:
     # manual clustering
     if Setting.get('map', False):
         alg.input_map_clustering(system)
-        aux.print_1_line_stars()
+        lib.print_1_line_stars()
 
     # without minimum-cut Tree
     for opt in cluster_opt:
@@ -144,7 +144,7 @@ for system in Project:
         else:
             continue
 
-        aux.print_1_line_stars()
+        lib.print_1_line_stars()
 
     # construct minimum-cut tree
     if 't' in cmd_opt:
@@ -168,7 +168,7 @@ for system in Project:
             print('Method t: top-down clustering method (target first)')
             alg.ascending_cut(system, 1)
 
-        aux.print_1_line_stars()
+        lib.print_1_line_stars()
 
 
 # ============================================================

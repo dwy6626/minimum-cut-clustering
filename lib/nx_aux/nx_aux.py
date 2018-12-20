@@ -3,7 +3,7 @@ from . import nx_pydot
 
 def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energy', rc_order=None):
     # prevent circular import
-    from aux import pass_int, pass_float, nx, wraps, os
+    from lib import pass_int, pass_float, nx, wraps, os
     from plot import colormap
     from alg import flow_kmeans, FFAName
     from matplotlib.colors import rgb2hex

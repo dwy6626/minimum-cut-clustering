@@ -1,7 +1,7 @@
 # import local modules
 from .map import Map
 from .tree import MinCutTree
-from aux import *
+from lib import *
 import alg
 import plot
 

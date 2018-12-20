@@ -1,6 +1,6 @@
 # De-Wei Ye, YCC lab, 2018
 # modified from CMRT program (in C) by Tseng Wei-Hsiang, YCC lab, 2015
-from aux import *
+from lib import *
 
 
 def modified_Redfield_theory_calculation(hamiltonian, temperature, reorganization_energy, cutoff_freq):
