@@ -2,10 +2,10 @@
 a python tool to analyze exciton networks in photosynthetic systems
 
 ## Introduction
-- The minimum-cut clustering method is developed by Wei-Hsiang Tseng (Dimsplendid) in his master thesis 
-  "Theoretical Analysis of Energy Transfer Networks in Photosynthetic Systems"
-  (https://hdl.handle.net/11296/47fh6w) 
-  @ Yuan-Chung Cheng's group (http://quantum.ch.ntu.edu.tw/ycclab/)
+The minimum-cut clustering method is developed by Wei-Hsiang Tseng (Dimsplendid) in his master thesis 
+"Theoretical Analysis of Energy Transfer Networks in Photosynthetic Systems"
+(https://hdl.handle.net/11296/47fh6w) 
+@ Yuan-Chung Cheng's group (http://quantum.ch.ntu.edu.tw/ycclab/)
 ##### See also
  simpleNA (https://github.com/dimsplendid/simpleNA), the predecessor, in C
 

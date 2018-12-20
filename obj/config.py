@@ -9,7 +9,7 @@ CheckFile = '.mincut_configure'
 
 
 class Config:
-    def __init__(self):
+    def __init__(self, colab=False):
         # Set output options
         np.set_printoptions(linewidth=150)
         np.set_printoptions(formatter={'float': lambda x: "{:>8.2f}".format(x)})
@@ -34,6 +34,7 @@ class Config:
             'legend.frameon': False,
             'lines.markeredgewidth': 3
         }
+        self.__is_colab = colab
         self.config()
 
     def config(self):
@@ -61,7 +62,7 @@ class Config:
         import platform
         local_os = platform.system()
         print('Your os is', local_os, '\n')
-        if local_os == 'Linux':
+        if local_os == 'Linux' and not self.__is_colab:
             # if cannot modify backend, than don't do that
             try:
                 mpl.use('Agg')

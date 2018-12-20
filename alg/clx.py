@@ -50,7 +50,7 @@ def k_clustering(system):
                 break
 
 
-def cut_off_method(system, option, pass_map=False):
+def cut_off_method(system, option=4, pass_map=False):
     return_object = {}
 
     edge_list = system.to_undirected(option)

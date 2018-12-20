@@ -250,25 +250,36 @@ class Project:
                     # dynamics
                     dynamics_opt = [dynamics, flux, cost]
                     if any(dynamics_opt):
-                        system.get_dynamics(
+                        population_dynamics = system.get_dynamics(
                             cluster,
                             pyplot_output=dynamics_opt[0],
                             flux=dynamics_opt[1],
-                            cost=i if dynamics_opt[2] else None
+                            cost=dynamics_opt[2]
                         )
                         print_1_line_stars()
+
+                        if cost:
+                            # directly add the result to the end of data frame
+                            df = self.data_frame[h_id]
+                            df.iloc[i, df.columns.get_loc('PopDiff')] = population_dynamics[1]
 
         if cost:
             self.plot_cost()
 
-    def plot_cost(self):
-        for h_id, system in enumerate(self):
+    def plot_cost(self, selector=None):
+        if not selector:
+            selector = range(len(self.__systems))
+        for h_id in selector:
+            system = self.__systems[h_id]
+
             if not system.is_population_difference_calculated():
-                system.get_dynamics(cost=h_id, pyplot_output=False)
+                df = self.data_frame[h_id]
+                for i, (m, n, cgm, _, _) in df.iterrows():
+                    df.iloc[i, df.columns.get_loc('PopDiff')] = system.get_dynamics(cost=True)[1]
 
             plot.plot_cost(
                 system,
-                assigned_cost=pass_int(self.setting['cost']),
+                x_max=pass_int(self.setting['cost']),
                 print_marker=self.setting['marker'] == 'true',
                 y_max=pass_float(self.setting.get('ymax', '0.')),
                 legend='nolegend' not in self.setting

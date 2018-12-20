@@ -457,9 +457,9 @@ class System:
 
     def get_dynamics(
             self, target_object=None, pyplot_output=False,
-            cost=None, flux=False, create_pop_animation=False
+            cost=False, flux=False, create_pop_animation=False
     ):
-        if not self.is_population_difference_calculated() and cost is not None:
+        if not self.is_population_difference_calculated() and cost:
             self.__cost = True
 
         is_clustered = False
@@ -567,8 +567,7 @@ class System:
 
         # for population comparison (dash line in dynamics plots of cluster)
         pop_org = np.zeros((size, time_grid))
-        # cost: pass an int val, not bool: "is not None" to assert 0
-        if is_clustered and (pyplot_output or cost is not None):
+        if is_clustered and (pyplot_output or cost):
             # check if full network dynamics is calculated
             if self.__pop is None:
                 print('\ncalculate the full dynamics for comparison')
@@ -603,7 +602,7 @@ class System:
 
         # spline
         rt = pop_seq
-        if cost is not None or flux:
+        if cost or flux:
             pop_org2 = np.zeros((size, spline_size))
             pop_seq2 = np.zeros((size, spline_size))
             time_sequence2 = np.linspace(0, propagate_time, spline_size)
@@ -637,14 +636,11 @@ class System:
                 nx_aux.nx_graph_draw(graph, self, plot_name + 'IntegratedFlux', rc_order=nodes)
 
             # calculate cost
-            if cost is not None:
+            if cost:
                 b = sum(sum((pop_org2 - pop_seq2) ** 2))
                 pop_diff = b / size / spline_size
                 print('population dynamics square difference: {:.2e}'.format(pop_diff))
 
-                # directly add the result to the end of data frame
-                df = self.back_ptr.data_frame[self.get_index()]
-                df.iloc[cost, df.columns.get_loc('PopDiff')] = pop_diff
                 rt = pop_seq, pop_diff
 
         # plot population dynamics

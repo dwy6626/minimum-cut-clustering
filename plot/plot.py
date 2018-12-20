@@ -196,16 +196,17 @@ def plot_series(
 
 
 def plot_cost(
-        system, assigned_cost=100, print_marker=True,
+        system, x_max=100, print_marker=True,
         y_max=0, legend=True
 ):
     # https://matplotlib.org/api/markers_api.html#module-matplotlib.markers
 
     if not system.is_population_difference_calculated():
-        system.cal_cost()
+        return
+        # system.get_population_difference()
 
-    if len(system) > assigned_cost:
-        len_x = assigned_cost
+    if len(system) > x_max:
+        len_x = x_max
     else:
         len_x = len(system) - 1
 
