@@ -71,21 +71,31 @@ def colormap(color_number=256, shift=0, bright=False, dark=False, transparency=1
     return cmap2
 
 
-# save matplotlib picture:
-def save_fig(name, things=None):
-    print('save figure:', name)
-    plt.savefig(fname='{}'.format(name), bbox_extra_artists=things, bbox_inches='tight')
+def save_fig(name, things=None, output=True):
+    """
+    save (and close) or show matplotlib picture
+    :param name: file name
+    :param things: plt.savefig(bbox_extra_artists=things)
+    :param output: show picture only
+    :return:
+    """
+    if output:
+        print('save figure:', name)
+        plt.savefig(fname='{}'.format(name), bbox_extra_artists=things, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
 
 
 def plot_series(
         series, x_grid, y_names, axes_names, plot_name,
         y_max=0, x_max=0,
         series2=None, divide=5, zero=False, custom_colormap=None,
-        trimer=False, legend=True,
+        trimer=False, legend=True, save_to_file=False
 ):
-    if divide > 8 and custom_colormap is None:
-        # print('maximum: 8 lines per plot is supported')
-        divide = 8
+    """
+    split data into different figures
+    """
 
     # grouping the excitons:
     # if trimer:
@@ -191,19 +201,14 @@ def plot_series(
             this_name = '{}_{}'.format(plot_name, g_i)
         else:
             this_name = plot_name
-        save_fig(this_name, fig_objects)
-        plt.close()
+        save_fig(this_name, fig_objects, output=save_to_file)
 
 
 def plot_cost(
         system, x_max=100, print_marker=True,
-        y_max=0, legend=True
+        y_max=0, legend=True, save_to_file=False
 ):
     # https://matplotlib.org/api/markers_api.html#module-matplotlib.markers
-
-    if not system.is_population_difference_calculated():
-        return
-        # system.get_population_difference()
 
     if len(system) > x_max:
         len_x = x_max
@@ -252,11 +257,10 @@ def plot_cost(
         lgn = plt.legend(loc='upper right')
         fig_objects.append(lgn)
 
-    save_fig(system.get_output_name('PopDiff'), fig_objects)
-    plt.close()
+    save_fig(system.get_output_name('PopDiff'), fig_objects, output=save_to_file)
 
 
-def plot_tf(system, clx_map=None, cutoff=0.1):
+def plot_tf(system, clx_map=None, cutoff=0.1, save_to_file=False):
     print('option -I: site-exciton corresponding plot')
 
     def pickup_str(str1, str2):
@@ -402,8 +406,7 @@ def plot_tf(system, clx_map=None, cutoff=0.1):
         str1 = '{}_{}c_'.format(clx_map.method, len(clx_map))
     else:
         str1 = 'Full_'
-    save_fig(system.get_output_name(str1 + 'SiteExciton'), things)
-    plt.close()
+    save_fig(system.get_output_name(str1 + 'SiteExciton'), things, output=save_to_file)
 
 
 def get_p_shift(site, ps1=False):
@@ -472,6 +475,34 @@ def text_pos(ax, right=False, medium=False, xshift=0.02, yshift=0.02):
     return x, y
 
 
+def plot_dyanmics(
+    pop_seq, time_sequence, pop_names, plot_name='', pop_seq2=None,
+    y_max=0, x_max=0, legend=True,
+    divide=100, save_to_file=False
+):
+    """
+    plot population dynamics
+    handle: the axes names, colors
+    """
+    size = len(pop_names)
+    plot_name += 'Dynamics'
+    axes_names = ('Time (ps)', 'Population')
+
+    if divide < min(9, size):
+        cmap = DefaultMap[:divide] * ((size - 1) // divide + 1)
+    else:
+        cmap = colormap(size)
+        cmap.reverse()
+
+    plot_series(
+        pop_seq, time_sequence, pop_names, axes_names, plot_name,
+        series2=pop_seq2, divide=divide, custom_colormap=cmap,
+        y_max=y_max, x_max=x_max,
+        legend=legend, save_to_file=save_to_file
+    )
+    return
+
+
 def population_animatation(
         pop_seq, pos_file, site_names, eigenvectors, time_sequence, anime_name,
         dpi=100, ps1=False, maxsize=20000, allsite=False
@@ -519,7 +550,7 @@ def population_animatation(
     animation.save(name, writer=writer, dpi=dpi)
 
 
-def plot_exst(system, cutoff=0.1, clx_map=None, allsite=False):
+def plot_exst(system, cutoff=0.1, clx_map=None, allsite=False, save_to_file=False):
     """
     plot the positions of excitons
     real space projection to 2D
@@ -581,5 +612,4 @@ def plot_exst(system, cutoff=0.1, clx_map=None, allsite=False):
         plt.text(*text_pos(ax, True),
                  'cutoff = {:.2f}'.format(cutoff), size=12, ha='right')
 
-        save_fig(system.get_output_name(plot_name + 'Excitons_{}'.format(exst_name)))
-        plt.close()
+        save_fig(system.get_output_name(plot_name + 'Excitons_{}'.format(exst_name)), output=save_to_file)

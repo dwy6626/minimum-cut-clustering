@@ -12,7 +12,6 @@ from time import strftime
 import pandas as pd
 import matplotlib as mpl
 from scipy.linalg import expm  # matrix exponent
-from scipy import interpolate as interp
 from scipy import integrate
 
 

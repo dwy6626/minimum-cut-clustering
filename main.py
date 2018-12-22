@@ -70,7 +70,8 @@ for system in Project:
     if judge_set.intersection(opt_set['d']):
         print('Start plotting original network')
         lib.nx_aux.nx_graph_draw(
-            system.get_graph(), system, system.get_plot_name() + 'Rate', rc_order=system.ExcitonName
+            system.get_graph(), Project.config.get_graphviz_dot_path(), Setting,
+            system.get_plot_name() + 'Rate', rc_order=system.ExcitonName
         )
         lib.print_1_line_stars()
 
@@ -89,16 +90,25 @@ for system in Project:
         lib.print_1_line_stars()
 
     # option -M: dynamics!
-    # option -p: time-integrated flux
-    # option -a: population dynamics animation
-    dynamics_opt = judge_set.intersection(opt_set['M']), judge_set.intersection(opt_set['p']), 'a' in cmd_opt
+    if judge_set.intersection(opt_set['M']):
+        system.plot_dynamics(save_to_file=True)
+        lib.print_1_line_stars()
 
-    if any(dynamics_opt):
-        system.get_dynamics(
-            pyplot_output=dynamics_opt[0],
-            flux=dynamics_opt[1],
-            create_pop_animation=dynamics_opt[2]
+    # option -p: time-integrated flux
+    if judge_set.intersection(opt_set['p']):
+        integrated_flux_matrix = system.get_integrated_flux(spline_size=lib.pass_int(Setting['spline']),
+                                                            save_to_file=True)
+        alg.plot_integrate_flux(
+            integrated_flux_matrix, system.ExcitonName, system.ExcitonEnergies, system.get_plot_name(),
+            Setting, Project.config.get_graphviz_dot_path()
         )
+        lib.print_1_line_stars()
+
+    # option -a: population dynamics animation
+    if 'a' in cmd_opt:
+        system.animate_dynamics(ps1_special_option='PSI' in Setting.InputFileName,
+                                dpi=lib.pass_int(Setting['dpi']),
+                                allsite='allsite' in Setting)
         lib.print_1_line_stars()
 
     # ============================================================
@@ -107,7 +117,7 @@ for system in Project:
 
     # manual clustering
     if Setting.get('map', False):
-        alg.input_map_clustering(system)
+        alg.input_map_clustering(system, system.back_ptr.setting['map'])
         lib.print_1_line_stars()
 
     # without minimum-cut Tree
@@ -119,7 +129,7 @@ for system in Project:
         # cut-off clustering
         elif opt == 'd':
             print('Method d: cut source-to-target rates')
-            alg.cut_off_method(system, 4)
+            alg.cut_off_method(system)
 
         elif opt == 'g':
             print('Method g: cut geometric mean rates')
@@ -157,7 +167,7 @@ for system in Project:
 
         elif opt == 'r':
             print('Method r: simple ratio cut-off method')
-            alg.simple_cut(system, 1)
+            alg.simple_ratio_cut(system, 1)
 
         elif opt == 'b':
             print('Method b: bottom-up clustering method')
@@ -176,5 +186,99 @@ for system in Project:
 # ============================================================
 
 
-Project.output_cluster_results(opt_set, 'l' in cmd_opt, 'c' in cluster_opt)
+if len(Project.data_frame) > 0:
+    cost = 'c' in cluster_opt
+    for h_id, system in enumerate(Project):
+        df = Project.data_frame[h_id]
+        for i, (m, n, cgm, _, _) in df.iterrows():
+            judge_ls = (n, 'c')
+
+            if system.has_hamiltonian() and opt_set['I'].intersection(judge_ls):
+                plot.plot_tf(system, cgm)
+                lib.print_1_line_stars()
+
+            if opt_set['e'].intersection(judge_ls):
+                plot.plot_exst(system, allsite='allsite' in Setting, clx_map=cgm)
+
+            dot = opt_set['d'].intersection(judge_ls)
+            ffa = opt_set['F'].intersection(judge_ls)
+            dynamics = opt_set['M'].intersection(judge_ls)
+            flux = opt_set['p'].intersection(judge_ls)
+            rate = opt_set['r'].intersection(judge_ls)
+
+            if any([dot, ffa, dynamics, flux, rate, cost]):
+                # tuple: rate matrix, energies, name
+                cluster = *system.get_cluster(cgm), system.get_plot_name(cgm)
+
+                # graphviz / dot files
+                if dot:
+                    lib.nx_aux.nx_graph_draw(
+                        lib.get_cluster_graph(cluster), dot_path=Project.config.get_graphviz_dot_path(),
+                        setting=Setting, plot_name=cluster[2] + 'Rate', rc_order=list(cluster[0].keys())
+                    )
+                    lib.print_1_line_stars()
+
+                if ffa:
+                    alg.flow_analysis(system, cluster)
+                    lib.print_1_line_stars()
+
+                if rate:
+                    if 'l' in cmd_opt:
+                        alg.print_rate_matrix(cluster[0], lib.pass_int(Setting['decimal']))
+                    alg.save_rate(cluster[0], cluster[2], cluster[1])
+                    lib.print_1_line_stars()
+
+                # dynamics
+                dynamics_opt = [dynamics, flux, cost]
+                if any(dynamics_opt):
+                    pop_seq, time_sequence, nodes = system.get_dynamics(cluster)
+                    pop_full = system.get_comparison_to_full_dynamics(nodes)
+
+                    # for label is too long: cluster X
+                    pop_names = lib.wraps(nodes, maxlen=30)
+
+                    if dynamics:
+                        plot.plot_dyanmics(
+                            pop_seq, time_sequence, pop_names,
+                            plot_name=cluster[2], pop_seq2=pop_full,
+                            y_max=lib.pass_float(Setting.get('ymax', '0.')),
+                            x_max=lib.pass_float(Setting.get('xmax', '0.')),
+                            legend='nolegend' not in Setting,
+                            divide=lib.pass_int(Setting.get('divide', 100)),
+                            save_to_file=True
+                        )
+
+                    if cost or flux:
+                        pop_seq2, time_sequence2 = lib.spline_grid(pop_seq, time_sequence,
+                                                                   lib.pass_int(Setting['spline']))
+
+                        if flux:
+                            integrated_flux_matrix = alg.get_integrated_flux(
+                                pop_seq2, cluster[0], time_sequence2,
+                                nodes=nodes,
+                                norm=lib.pass_int(Setting.get('multiply', 1)),
+                                plot_details='log' in Setting,
+                                plot_name=cluster[2],
+                                y_max=lib.pass_float(Setting.get('ymax', '0.')),
+                                x_max=lib.pass_float(Setting.get('xmax', '0.')),
+                                divide=lib.pass_int(Setting.get('divide', 100)),
+                                legend='nolegend' not in Setting,
+                                save_to_file=True
+                            )
+                            alg.plot_integrate_flux(
+                                integrated_flux_matrix, nodes, cluster[1], cluster[2],
+                                Setting, Project.config.get_graphviz_dot_path()
+                            )
+
+                        if cost:
+                            # directly add the result to the end of data frame
+                            df.iloc[i, df.columns.get_loc('PopDiff')] = system.get_population_difference(
+                                cluster, pop_seq2, False
+                            )
+
+                    lib.print_1_line_stars()
+
+    if cost:
+        Project.plot_cost(save_to_file=True)
+
 Project.save()

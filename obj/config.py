@@ -19,7 +19,7 @@ class Config:
         # Global Variables
         self.__OutPutFolder = 'output/'
         self.__InPutFolder = 'input/'
-        self.__DotPath = ''
+        self.__DotPath = None
         self.__mpl_dict = {
             "font.family": 'Arial',
             'font.size': 30,
@@ -74,8 +74,13 @@ class Config:
             print('    {}: {}'.format(k, v))
         mpl.rcParams.update(self.__mpl_dict)
 
-    def get_graphaviz_dot_path(self):
-        if not self.__DotPath:
+    def get_graphviz_dot_path(self):
+        """
+        ask the system or user for dot program
+        :return: str, the path of graphviz if there is one
+                 otherwise, empty string
+        """
+        if self.__DotPath is None:
             dot_path_file = os.popen('ls ' + CheckFile).read()
             if not dot_path_file:
                 # check graphviz:
@@ -92,16 +97,18 @@ class Config:
                         try:
                             dot_ver = os.popen(dot_path + ' -V').read()
                         except:
-                            print('  path error')
-                            path_exit()
+                            no_dot_path()
+                            dot_path = ''
                     else:
-                        path_exit()
+                        no_dot_path()
+                        dot_path = ''
 
                 else:
                     print("  " + dot_path)
 
-                with open(CheckFile, 'w') as f:
-                    f.write(dot_path)
+                if dot_path:
+                    with open(CheckFile, 'w') as f:
+                        f.write(dot_path)
             else:
                 with open(CheckFile, 'r') as f:
                     dot_path = f.read()
@@ -114,7 +121,6 @@ class Config:
 # ============================================================
 
 
-def path_exit():
-    print("  you need to install graphviz first\n"
+def no_dot_path():
+    print("  you need to install graphviz first to plot the .dot file\n"
           "  visit https://www.graphviz.org for more information")
-    exit(1)

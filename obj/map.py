@@ -6,7 +6,7 @@ from numpy.random import randint
 
 
 # the class manipulate nodes and cluster
-class Map:
+class ClusterMap:
     def __init__(self, system, method, one_group=True, site_map=False):
         # initialize: a cluster list
         self.__data = []
@@ -244,7 +244,7 @@ class Map:
     # generate a copy with same back_ptr
     # site_map options is not supported
     def copy(self):
-        new_map = Map(self.back_ptr, self.method, one_group=False)
+        new_map = ClusterMap(self.back_ptr, self.method, one_group=False)
         for g in self.groups():
             new_map.group_up(g)
         return new_map

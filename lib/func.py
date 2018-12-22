@@ -5,6 +5,7 @@ from itertools import combinations, permutations, count
 
 # import 3rd party modules
 import numpy as np
+from scipy import interpolate as interp
 from scipy import constants as const
 import networkx as nx
 
@@ -264,3 +265,14 @@ def get_cluster_graph(cluster):
         ((m, n, cluster[0][m][n]) for m, n in permutations(cluster[0].keys(), 2))
     )
     return graph
+
+
+def spline_grid(sequences, x_grid, spline_size):
+    seq2 = np.zeros((sequences.shape[0], spline_size))
+    x_grid2 = np.linspace(0, x_grid[-1], spline_size)
+
+    for i in range(sequences.shape[0]):
+        a1 = list([x for x in sequences[i].T])
+        seq2[i] = interp.InterpolatedUnivariateSpline(x_grid, a1)(x_grid2)
+
+    return seq2, x_grid2

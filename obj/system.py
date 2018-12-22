@@ -1,5 +1,5 @@
 # import local modules
-from .map import Map
+from .map import ClusterMap
 from .tree import MinCutTree
 from lib import *
 import alg
@@ -36,7 +36,8 @@ class System:
         self.__Tree = None
 
         # full (all-states) population dynamics
-        self.__pop = None
+        # 3-tuple: dynamics(t), time, grid
+        self.__pop_tuple = None
 
         # if the population difference is calculated?
         # (to a selected size: 15 by default)
@@ -334,13 +335,10 @@ class System:
         return self.Hamiltonian is not None
 
     def get_new_map(self, job_name, one_group=False, site_map=False):
-        return Map(self, job_name, one_group, site_map)
+        return ClusterMap(self, job_name, one_group, site_map)
 
     def get_index(self):
         return self.__index
-
-    def is_population_difference_calculated(self):
-        return self.__cost
 
     def get_graph(self):
         graph = nx.DiGraph()
@@ -367,7 +365,11 @@ class System:
         return self.back_ptr.get_output_name('{}_{}_'.format(H_suffix(self.get_index()), n_c))
 
     def get_cluster(self, clx_map):
-        # build the coarse-grained model using the rate matrix
+        """
+        build the coarse-grained model
+        :param clx_map: cluster_map
+        :return: rate matrix, energies (2-tuple)
+        """
         rate = self.RateConstantMatrix.values
         energies = np.array(self.ExcitonEnergies)
 
@@ -455,44 +457,97 @@ class System:
         r[:] = undirected_r + undirected_r.T
         return sorted([(u, v, r[u][v]) for u, v in combinations(r.keys(), 2)], reverse=True, key=itemgetter(2))
 
-    def get_dynamics(
-            self, target_object=None, pyplot_output=False,
-            cost=False, flux=False, create_pop_animation=False
-    ):
-        if not self.is_population_difference_calculated() and cost:
-            self.__cost = True
-
-        is_clustered = False
-        nodes = self.ExcitonName
-        energies = self.ExcitonEnergies
-        if target_object:
-            # if len(target_object) == 3:
-            # if safely used, no need to check
-            is_clustered = True
-            rate, cluster_energies, plot_name = target_object
-            clusters = rate.keys()
-
-        else:
+    def __cluster_handler(self, cluster):
+        """
+        :param cluster: should be
+                        1. tuple: rate matrix, cluster energies, (job name)
+                        2. cluster map object
+        :return: rate matrix, energies, job_name
+        """
+        if cluster is None:
             rate = self.RateConstantMatrix
-            plot_name = self.back_ptr.get_output_name('{}_{}'.format(H_suffix(self.get_index()), 'Full_'))
+            cluster_energies = None
+            plot_name = self.get_output_name('Full_')
+        else:
+            if isinstance(cluster, ClusterMap):
+                rate, cluster_energies = self.get_cluster(cluster)
+                plot_name = self.get_plot_name(cluster)
+            elif len(cluster) == 3:
+                rate, cluster_energies, plot_name = cluster
+            elif len(cluster) == 2:
+                rate, cluster_energies = cluster
+                plot_name = ''
+            else:
+                print('param: cluster should be \n'
+                      '       1. tuple: rate matrix, cluster energies, (job name)\n'
+                      '       2. cluster map object')
+                raise KeyError
+        return rate, cluster_energies, plot_name
 
+    def plot_dynamics(
+            self, cluster=None, save_to_file=False, max_name_len=30
+    ):
+        _, cluster_energies, plot_name = self.__cluster_handler(cluster)
+        is_clustered = cluster_energies is not None
+
+        # get more plot settings
         setting = self.back_ptr.setting
-
-        # setup variables
-        size = len(rate.keys())
-        propagate_time = pass_int(setting['time'])
-        time_grid = pass_int(setting['grid'])
-        spline_size = pass_int(setting['spline'])
-        time_sequence = np.linspace(0, propagate_time, time_grid)
+        y_max = pass_float(setting.get('ymax', '0.'))
+        x_max = pass_float(setting.get('xmax', '0.'))
         divide = pass_int(setting.get('divide', 100))
-        print(
-            'dynamics propagation setting:\n'
-            '  propagate time: {} ps\n'
-            '  grids on time: {}\n'
-            '  grid on spline: {}\n'.format(propagate_time, time_grid, spline_size)
+        pop_seq2 = None
+
+        if is_clustered:
+            pop_seq, time_sequence, clusters = self.__cal_dynamics(cluster=cluster)
+            pop_seq2 = self.get_comparison_to_full_dynamics(clusters)
+
+            # for label is too long: cluster X
+            pop_names = wraps(clusters, maxlen=30)
+
+            plot.plot_dyanmics(
+                pop_seq, time_sequence, pop_names, plot_name,
+                pop_seq2=self.get_comparison_to_full_dynamics(clusters),
+                y_max=y_max, x_max=x_max, divide=divide,
+                legend='nolegend' not in setting,
+                save_to_file=save_to_file
+            )
+        else:
+            if self.__pop_tuple is None:
+                self.__cal_dynamics()
+
+            pop_names = self.ExcitonName
+            pop_seq, propagate_time, time_grid = self.__pop_tuple
+            time_sequence = np.linspace(0, propagate_time, time_grid)
+
+        plot.plot_dyanmics(
+            pop_seq, time_sequence, pop_names, plot_name,
+            pop_seq2=pop_seq2,
+            y_max=y_max, x_max=x_max, divide=divide,
+            legend='nolegend' not in setting,
+            save_to_file=save_to_file
         )
 
-        # get initial population:
+        # basis transform for original network
+        # if H_eff is provided
+        if self.has_hamiltonian() and 'site' in setting and not is_clustered:
+            print('--site: change to site basis')
+            pop_seq_site = np.dot(self.EigenVectors ** 2, pop_seq)
+            plot.plot_dyanmics(
+                pop_seq_site, time_sequence, self.SiteName, plot_name + 'Site_',
+                y_max=y_max, x_max=x_max, divide=divide,
+                legend='nolegend' not in setting,
+                save_to_file=save_to_file
+            )
+
+    def get_initial_populations(self, nodes, energies, clusters=None, cluster_energies=None):
+        if clusters is not None and cluster_energies is not None:
+            size = len(clusters)
+            is_clustered = True
+        else:
+            is_clustered = False
+            size = len(self)
+
+        setting = self.back_ptr.setting
 
         # equal partitions
         init_option = setting['init']
@@ -543,153 +598,189 @@ class System:
                     pop_cluster[i] += pop[nodes.index(n)]
             pop = pop_cluster
 
-        wrap_nodes = [wrap_str(n.split()) for n in rate.keys()]
+            wrap_nodes = [wrap_str(n) for n in clusters]
+
+        else:
+            wrap_nodes = [wrap_str(n) for n in nodes]
+
         name_len = max([max([len(n) for n in wrap_nodes]) + 1, 10])
-        print('initial populatuons:')
+        print('initial populations:')
         for n, p in zip(wrap_nodes, pop.flat):
             print('{{:{}}}: {{:.2f}}'.format(name_len).format(n, p))
         print()
+
+        return pop.reshape(-1, 1)
+
+    def __cal_dynamics(self, cluster=None):
+        """
+        calculate population dynamics and save to self.__pop_tuple (if not clustered)
+        :param cluster: cluster tuple for self.__cluster_handler()
+
+        the return object is 3-tuple:
+        :return pop_seq: population dynamics
+        :return time_sequence: time grids of pop_seq
+        :return nodes: corresponding node names
+        """
+        is_clustered = False
+        nodes = self.ExcitonName
+        energies = self.ExcitonEnergies
+
+        rate, cluster_energies, _ = self.__cluster_handler(cluster)
+
+        if cluster_energies is not None:
+            clusters = rate.keys()
+            is_clustered = True
+        else:
+            clusters = None
+
+        setting = self.back_ptr.setting
+
+        # setup variables
+        propagate_time = pass_int(setting['time'])
+        time_grid = pass_int(setting['grid'])
+        time_sequence = np.linspace(0, propagate_time, time_grid)
+        print(
+            'dynamics propagation setting:\n'
+            '  propagate time: {} ps\n'
+            '  grids on time: {}\n'.format(propagate_time, time_grid)
+        )
+
+        pop = self.get_initial_populations(nodes, energies, clusters, cluster_energies)
 
         # propagation
         if 'log' in setting:
             print('start dynamics calculation')
             timer_start = timeit.default_timer()
 
-        pop_seq = alg.propagate(
-            pop.reshape(-1, 1), rate.values, time_sequence,
-            option=setting['propagate'] == 'poorman',
-            print_pop='log' in setting
-        )
+            pop_seq = alg.propagate(
+                pop, rate.values, time_sequence,
+                option=setting['propagate'] == 'poorman',
+                print_pop=True
+            )
 
-        if 'log' in setting:
             timer_end = timeit.default_timer()
             print('propagate time {}'.format(timer_end - timer_start))
-
-        # for population comparison (dash line in dynamics plots of cluster)
-        pop_org = np.zeros((size, time_grid))
-        if is_clustered and (pyplot_output or cost):
-            # check if full network dynamics is calculated
-            if self.__pop is None:
-                print('\ncalculate the full dynamics for comparison')
-                self.get_dynamics(pyplot_output=False)
-
-            for i, n in enumerate(nodes):
-                for v, g in enumerate(clusters):
-                    if n in g.split():
-                        pop_org[v] += self.__pop[i]
-            nodes = clusters
-            energies = cluster_energies
+        else:
+            pop_seq = alg.propagate(
+                pop, rate.values, time_sequence,
+                option=setting['propagate'] == 'poorman',
+            )
 
         if not is_clustered:
-            self.__pop = pop_seq
+            self.__pop_tuple = pop_seq, propagate_time, time_grid
+        else:
+            nodes = list(clusters)
 
-        # get more plot settings
-        ymax = pass_float(setting.get('ymax', '0.'))
-        xmax = pass_float(setting.get('xmax', '0.'))
+        return pop_seq, time_sequence, nodes
 
-        # animation
-        if create_pop_animation and not is_clustered:
-            if not self.has_hamiltonian() or self.back_ptr.SitePos is None:
-                raise KeyError('please provide Hamiltonian and Cartesian coordinates')
-            plot.population_animatation(
-                pop_seq, self.back_ptr.SitePos, self.SiteName,
-                (self.EigenVectors ** 2).T,
-                time_sequence, self.get_output_name(),
-                ps1='PSI' in setting.InputFileName,
-                dpi=pass_int(setting['dpi']),
-                allsite='allsite' in setting
-            )
+    def get_integrated_flux(self, cluster=None, spline_size=3000, save_to_file=False):
+        pop_seq, time_sequence, nodes = self.get_dynamics(cluster)
+        pop_seq2, time_sequence2 = spline_grid(pop_seq, time_sequence, spline_size)
 
-        # spline
-        rt = pop_seq
-        if cost or flux:
-            pop_org2 = np.zeros((size, spline_size))
-            pop_seq2 = np.zeros((size, spline_size))
-            time_sequence2 = np.linspace(0, propagate_time, spline_size)
+        # retrieve the cluster information
+        rate, _, plot_name = self.__cluster_handler(cluster)
 
-            for i in range(size):
-                a1 = list([x for x in pop_seq[i].T])
-                a2 = list([x for x in pop_org[i].T])
+        setting = self.back_ptr.setting
+        y_max = pass_float(setting.get('ymax', '0.'))
+        x_max = pass_float(setting.get('xmax', '0.'))
 
-                pop_seq2[i] = interp.InterpolatedUnivariateSpline(time_sequence, a1)(time_sequence2)
-                pop_org2[i] = interp.InterpolatedUnivariateSpline(time_sequence, a2)(time_sequence2)
+        return alg.get_integrated_flux(
+                pop_seq2, rate, time_sequence2,
+                norm=pass_int(setting.get('multiply', 1)),
+                plot_details='log' in setting,
+                plot_name=plot_name,
+                y_max=y_max, x_max=x_max,
+                legend='nolegend' not in setting,
+                save_to_file=save_to_file
+        )
 
-            # flux
-            if flux:
-                self.back_ptr.print_log('calculate flux')
-                integrated_flux_matrix = alg.get_integrated_flux(
-                    pop_seq2, rate, time_sequence2,
-                    norm=pass_int(setting.get('multiply', 1)),
-                    plot_details='log' in setting,
-                    plot_name=plot_name,
-                    divide=divide,
-                    y_max=ymax, x_max=xmax,
-                    legend='nolegend' not in setting
-                )
-                graph = nx.DiGraph()
-                graph.add_nodes_from(
-                    ((nodes[i], {'energy': energies[i]}) for i in range(size))
-                )
-                graph.add_weighted_edges_from(
-                    ((nodes[j], nodes[i], integrated_flux_matrix[i, j]) for i, j in permutations(range(size), 2))
-                )
-                nx_aux.nx_graph_draw(graph, self, plot_name + 'IntegratedFlux', rc_order=nodes)
+    def get_dynamics(self, cluster=None):
+        """
+        propagate the population dynamics
+        :param cluster: should be
+                        1. tuple: rate matrix, cluster energies, (job name)
+                        2. cluster map object
+        the return object is 3-tuple:
+        :return pop_seq: population dynamics
+        :return time_sequence: time grids of pop_seq
+        :return nodes: corresponding node names
+        """
+        if cluster is None:
+            if self.__pop_tuple is None:
+                self.__cal_dynamics()
+            pop_seq, propagate_time, time_grid = self.__pop_tuple
+            time_sequence = np.linspace(0, propagate_time, time_grid)
+            nodes = self.ExcitonName
+        else:
+            pop_seq, time_sequence, nodes = self.__cal_dynamics(cluster)
+        return pop_seq, time_sequence, nodes
 
-            # calculate cost
-            if cost:
-                b = sum(sum((pop_org2 - pop_seq2) ** 2))
-                pop_diff = b / size / spline_size
-                print('population dynamics square difference: {:.2e}'.format(pop_diff))
+    def animate_dynamics(self, ps1_special_option=False, dpi=100, allsite=False):
+        """
+        save a population transfer animation, 2D projection
+        Hamiltonian and site position most be loaded in the project
+        :param dpi: integer, video quality
+        :param allsite: Boolean, mark all site or not
+        :param ps1_special_option: Boolean, mark some important site only
+        :return: None
+        """
+        if not self.has_hamiltonian() or self.back_ptr.SitePos is None:
+            raise KeyError('please provide Hamiltonian and Cartesian coordinates')
 
-                rt = pop_seq, pop_diff
+        if self.__pop_tuple is None:
+            self.__cal_dynamics()
 
-        # plot population dynamics
-        if pyplot_output:
-            plot_name += 'Dynamics'
-            if divide < min(9, size):
-                cmap = plot.DefaultMap[:divide] * ((size - 1) // divide + 1)
-            else:
-                cmap = plot.colormap(size)
-                cmap.reverse()
+        pop_seq, propagate_time, time_grid = self.__pop_tuple
+        time_sequence = np.linspace(0, propagate_time, time_grid)
 
-            axes_names = ('Time (ps)', 'Population')
+        plot.population_animatation(
+            pop_seq, self.back_ptr.SitePos, self.SiteName,
+            (self.EigenVectors ** 2).T,
+            time_sequence, self.get_output_name(),
+            ps1=ps1_special_option, dpi=dpi, allsite=allsite
+        )
 
-            if is_clustered:
-                pop_names = [wrap_str(n.split()) for n in nodes]
-                # for label is too long: cluster X
-                n_c = 1
-                for i, n in enumerate(pop_names):
-                    if len(n) > 30:
-                        label_new = 'cluster {}'.format(n_c)
-                        print('{} is: \n    {}'.format(label_new, n))
-                        pop_names[i] = label_new
-                        n_c += 1
+    def get_population_difference(self, cluster, pop_cluster=None, spline_size=3000):
+        if self.__pop_tuple is None:
+            print('\ncalculate the full dynamics for comparison')
+            self.__cal_dynamics()
 
-                plot.plot_series(
-                    pop_seq, time_sequence, pop_names, axes_names, plot_name,
-                    series2=pop_org, divide=divide, custom_colormap=cmap,
-                    y_max=ymax, x_max=xmax,
-                    legend='nolegend' not in setting,
-                )
-                return
+        # provided propagation result
+        if pop_cluster is None:
+            pop_cluster, time_sequence, _ = self.__cal_dynamics(cluster)
+        else:
+            _, propagate_time, time_grid = self.__pop_tuple
+            time_sequence = np.linspace(0, propagate_time, time_grid)
 
-            # basis transform for original network
-            # if H_eff is provided
-            if self.has_hamiltonian() and 'site' in setting:
-                print('--site: change to site basis')
-                pop_seq_site = np.dot(self.EigenVectors ** 2, pop_seq)
-                plot.plot_series(
-                    pop_seq_site, time_sequence, self.SiteName, axes_names, plot_name + '_Site',
-                    divide=divide, custom_colormap=cmap,
-                    y_max=ymax, x_max=xmax,
-                    legend='nolegend' not in setting
-                )
+        pop_full = self.get_comparison_to_full_dynamics(cluster[0].keys())
 
-            # Plot full network
-            plot.plot_series(
-                pop_seq, time_sequence, nodes, axes_names, plot_name,
-                divide=divide, custom_colormap=cmap,
-                y_max=ymax, x_max=xmax,
-                legend='nolegend' not in setting
-            )
-        return rt
+        if spline_size:
+            pop_full, _ = spline_grid(pop_full, time_sequence, spline_size)
+            pop_cluster, time_sequence = spline_grid(pop_cluster, time_sequence, spline_size)
+        else:
+            spline_size = pop_cluster.shape[1]
+            if spline_size != pop_full.shape[1]:
+                # align with provided pop_cluster
+                pop_full, _ = spline_grid(pop_full, time_sequence, spline_size)
+
+        b = sum(sum((pop_full - pop_cluster) ** 2))
+        pop_diff = b / len(cluster[1]) / spline_size
+        print('population dynamics square difference: {:.2e}'.format(pop_diff))
+        return pop_diff
+
+    def get_comparison_to_full_dynamics(self, clusters):
+        # for population comparison (dash line in dynamics plots of cluster)
+
+        # check if full network dynamics is calculated
+        if self.__pop_tuple is None:
+            print('\ncalculate the full dynamics for comparison')
+            self.__cal_dynamics()
+
+        pop_seq, _, time_grid = self.__pop_tuple
+        pop_full = np.zeros((len(clusters), time_grid))
+
+        for i, n in enumerate(self.ExcitonName):
+            for v, g in enumerate(clusters):
+                if n in g.split():
+                    pop_full[v] += pop_seq[i]
+        return pop_full

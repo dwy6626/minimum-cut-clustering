@@ -4,7 +4,25 @@ from lib import *
 # ============================================================
 
 
-def simple_cut(system, option=0):
+def simple_ratio_cut(system):
+    """
+    Simple Ratio (SR) Cut-off method, developed by Wei-Hsiang Tseng
+    Cluster results are save to system.back_ptr (Project object)
+    :param system: system to cluster
+    """
+    __simple_cut(system, option=1)
+
+
+def simple_cut(system):
+    """
+    Simple Cut-off (SC) method, developed by Wei-Hsiang Tseng
+    Cluster results are save to system.back_ptr (Project object)
+    :param system: system to cluster
+    """
+    __simple_cut(system, option=0)
+
+
+def __simple_cut(system, option=0):
     """
     option:
         0: SC simple cut
@@ -28,12 +46,20 @@ def simple_cut(system, option=0):
                 cluster_map.save()
 
 
-# find all flow, begin from min to max, look the 2 subgroups of the flow
-# compare the max intra-flow inside the subgroup
-# choose the subgroup with larger inter-flow => cut it as a new cluster
-# the other subgroup (remain) stay in the original group
 def ascending_cut(system, option=1):
     """
+    Ascending Cut-off (AC) method, or Top-Down Clustering (TDC)
+        developed by Wei-Hsiang Tseng
+
+    - begin from minimum flow
+    - find the intra-flow inside the subgroup
+      a specialized method: tree.ascending_cut_init() is used
+    - cut the cluster with larger intra-flow
+    - the other subgroup (remain) stay in the original group
+
+    Cluster results are save to system.back_ptr (Project object)
+
+    :param system: system to cluster
     :param option:
             0: cut source cluster if equal
             1: cut target cluster if equal
@@ -81,6 +107,17 @@ def ascending_cut(system, option=1):
 
 
 def bottom_up_clx(system):
+    """
+    Bottom-Up Clustering (BUC) or Minimum-cut Clustering
+    the major clustering methods adopted by YCC lab
+
+    - merge the subgraph with largest maximum flow
+      from the bottom (leaves) of the tree
+
+    Cluster results are save to system.back_ptr (Project object)
+
+    :param system: system to cluster
+    """
     tree_ref = system.get_tree()
     for suffix, norm in tree_ref.run('BUC'):
         cluster_map = system.get_new_map(suffix, one_group=False)

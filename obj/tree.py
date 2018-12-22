@@ -10,6 +10,14 @@ NormTemplate = '"true" or "false" or "both"'
 
 class MinCutTree:
     def __init__(self, system, ref_tree=None):
+        """
+        MinCutTree
+        minimum cut tree object
+        .root to get tree root
+        :param system: reference system
+        :param ref_tree: if a MinCutTree object is provided, will make a shallow copy for
+                         every nodes in the reference tree
+        """
 
         # global source and target
         self.tree_source = system.back_ptr.setting.get('s', 'not a node')
@@ -18,7 +26,7 @@ class MinCutTree:
         self.back_ptr = system
 
         if isinstance(ref_tree, MinCutTree):
-            self.norm = ref_tree.norm
+            self.__normalization_setting = ref_tree.__normalization_setting
             self.root = ref_tree.root.copy()
             return
 
@@ -26,10 +34,10 @@ class MinCutTree:
 
         # 0: normalized
         # 1: not normalized
-        self.norm = (False, False)
+        self.__normalization_setting = (False, False)
         while True:
             self.set_normalized(system.back_ptr.setting['norm'])
-            if any(self.norm):
+            if any(self.__normalization_setting):
                 break
             system.back_ptr.setting['norm'] = input(
                 'if the maximum flow need to be normalized?\n'
@@ -41,6 +49,9 @@ class MinCutTree:
         print_1_line_stars()
 
     def build_init(self):
+        """
+        build the
+        """
         print('Start generating min-cut tree using Ford-Fulkerson algorithms.')
         print('Augment path: maximum bottleneck path')
         self.__build(self.back_ptr.get_graph(), self.root)
@@ -52,8 +63,8 @@ class MinCutTree:
         if len(root.val) == 1:
             return
 
-        source = self.get_source_or_target(graph, root.val, target=False)
-        target = self.get_source_or_target(graph, root.val, target=True)
+        source = self.get_source(root.val)
+        target = self.get_target(root.val)
 
         print('source: {}, target: {}'.format(source, target))
 
@@ -73,37 +84,46 @@ class MinCutTree:
         self.__build(graph, root.left)
         self.__build(graph, root.right)
 
-    def get_source_or_target(self, graph, subset, target=False):
-        energies = {n: e for n, e in graph.nodes(data='energy') if n in subset}
+    def get_source(self, subset):
+        """
+        :param subset: set, subset of excitons
+        :return: str, a source node for maximum flow calculation
+        """
+        r = self.tree_source
+        if r in subset:
+            return r
+        return next((n for n in reversed(self.back_ptr.ExcitonName) if n in subset))
 
-        if target:
-            r = self.tree_target
-            _func = min
-        else:
-            r = self.tree_source
-            _func = max
-        if r not in subset:
-            # disordered networks:
-            # use the state name to determinate the source:
-            if self.back_ptr.get_index() != 0 or 'labelorder' in self.back_ptr.back_ptr.setting:
-                try:
-                    return str(_func(map(int, subset)))
-                except:
-                    pass
-
-        # otherwise: the exciton state with highest/lowest energy
-        return _func(energies, key=lambda x: energies[x])
+    def get_target(self, subset):
+        """
+        :param subset: set, subset of excitons
+        :return: str, a target node for maximum flow calculation
+        """
+        r = self.tree_target
+        if r in subset:
+            return r
+        return next((n for n in self.back_ptr.ExcitonName if n in subset))
 
     def set_normalized(self, norm):
+        """
+        set self.__normalization_setting
+        :param norm: str
+                     'true': normalized
+                     'false': not to normalized (uN)
+                     'both': get both results when clustering
+        """
         s = norm in ('true', 'both'), norm in ('both', 'false')
         if not any(s):
             Warning(NormTemplate)
         else:
-            self.norm = s
-            if self.norm[1]:
+            self.__normalization_setting = s
+            if self.__normalization_setting[1]:
                 print('Normalize min-cut tree')
 
     def copy(self):
+        """
+        :return: a shallow copy for every nodes in the reference tree
+        """
         return MinCutTree(self.back_ptr, ref_tree=self)
 
     def ascending_cut_init(self, norm):
@@ -128,10 +148,11 @@ class MinCutTree:
 
     def run(self, prefix):
         """
+        iterator for clustering algorithm
         :return: 1. suffix for job name
                  2. normalized?
         """
-        for i, b in enumerate(self.norm):
+        for i, b in enumerate(self.__normalization_setting):
             if b:
                 print(
                     ['maximum flow normalized',
@@ -140,22 +161,43 @@ class MinCutTree:
                 yield prefix + '_uN' if i == 1 else prefix, i == 0
 
     def draw(self):
+        """
+        draw the minimum-cut tree:
+        1. .dot file (text file)
+        2. call graphviz to draw the picture
+        """
         file_name = self.back_ptr.get_output_name('Tree')
         file_format = self.back_ptr.back_ptr.setting['format'].lower()
-        dot_path = self.back_ptr.back_ptr.config.get_graphaviz_dot_path()
+        dot_path = self.back_ptr.back_ptr.config.get_graphviz_dot_path()
 
         for run_name, norm in self.run(file_name):
             dot_file = run_name + '.dot'
             image_file = run_name + '.' + file_format
             print('Plot the min-cut binary tree into ' + image_file)
             self.__to_dot(dot_file, norm)
-            os.system(dot_path + " -T" + file_format + " " + dot_file + " -o " + image_file)
-            print('write dot file:', dot_file)
+            if dot_path:
+                os.system(dot_path + " -T" + file_format + " " + dot_file + " -o " + image_file)
 
     def collect_flow(self, norm=True, st=False, p=False, ratio=False, sort=False):
-        # do not assert st and p simultaneously
+        """
+        an auxiliary method for tree-based clustering
+
+        assert st and p simultaneously will trigger st only
+
+        :param norm: normalized flow?
+        :param st: source, target, flow 3-tuple or flow only
+        :param p: parent graph, flow 2-tuple or flow only
+        :param ratio: return the ratio of flow / parent's flow (for SR)
+        :param sort: sort the results by flow
+        :return: list, collected flow
+                (along with parent graph or source and target if st or p asserted)
+        """
+        if st and p:
+            p = False
+
         r = []
         s = [self.root]
+
         while s:
             cur = s.pop()
             if not cur.is_leaf():
@@ -181,6 +223,8 @@ class MinCutTree:
         return r
 
     def __to_dot(self, file_name, norm):
+        print('write dot file:', file_name)
+
         setting = self.back_ptr.back_ptr.setting
         color_dict = plot.node_color_energy(self.back_ptr.ExcitonName,
                                             self.back_ptr.get_original().ExcitonEnergies)

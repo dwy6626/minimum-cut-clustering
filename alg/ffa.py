@@ -252,7 +252,8 @@ def flow_analysis(system, cluster=None, draw=False):
     print(flow_matrix)
 
     if draw:
-        nx_aux.nx_graph_draw(network, system, system.get_plot_name() + 'FFA', label=FFAName, rc_order=order)
+        nx_aux.nx_graph_draw(network, system.back_ptr.config.get_graphviz_dot_path(), setting,
+                             system.get_plot_name() + 'FFA', label=FFAName, rc_order=order)
 
     # flow matrix
     return flow_matrix

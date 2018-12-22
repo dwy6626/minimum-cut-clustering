@@ -1,18 +1,19 @@
 from . import nx_pydot
 
 
-def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energy', rc_order=None):
+def nx_graph_draw(ref_graph, dot_path='', setting=None, plot_name='', label='weight', e_name='energy', rc_order=None):
     # prevent circular import
     from lib import pass_int, pass_float, nx, wraps, os
     from plot import colormap
     from alg import flow_kmeans, FFAName
     from matplotlib.colors import rgb2hex
 
-    setting = system.back_ptr.setting
+    if not setting:
+        from obj.setting import Setting
+        setting = Setting()
 
     file_name = plot_name + '_' + str(setting['cutoff']).replace('.', '')
     file_format = setting['format'].lower()
-    dot_path = system.back_ptr.config.get_graphaviz_dot_path()
     dot_file = file_name + '.dot'
     image_file = file_name + '.' + file_format
 
@@ -68,7 +69,7 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
 
     # mapping name
     mapping = {}
-    for n, r in zip(ref_graph.nodes(), wraps(ref_graph.nodes())):
+    for n, r in zip(ref_graph.nodes(), wraps(ref_graph.nodes(), width=12)):
         mapping[n] = r
         graph.nodes[n]['fontname'] = 'Arial bold'
         if len(n.split()) > 2:
@@ -120,9 +121,8 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
     # use pydot and system cmd instead of pygraphviz (which is out-of-date)
     with open(dot_file, 'w') as f:
         nx_pydot.write_dot(graph, f)
-
-    os.system(dot_path + " -T" + file_format + " " + dot_file + " -o " + image_file)
-
-    # save to:
-    print('plot graph:', image_file)
     print('write dot file:', dot_file)
+
+    if dot_path:
+        os.system(dot_path + " -T" + file_format + " " + dot_file + " -o " + image_file)
+        print('plot graph:', image_file)

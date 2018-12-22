@@ -47,8 +47,10 @@ def wrap_str(name, maxlen=float('inf'), width=float('inf'), trimer=False):
     # use "cluster X" as abbreviation when too long
     if len(r) > maxlen:
         global Wrap_N_c
+        label_new = 'cluster {}'.format(Wrap_N_c)
+        print('{} is: \n    {}'.format(label_new, r))
         Wrap_N_c += 1
-        return 'cluster ' + str(Wrap_N_c)
+        return r
 
     # add new lines for node shape
     return '\n'.join(__wrap_with_new_line([r], width))
@@ -76,10 +78,10 @@ def __wrap_with_new_line(lines, width):
     return r
 
 
-def wraps(list1, maxlen=float('inf'), trimer=False):
+def wraps(list1, maxlen=float('inf'), width=float('inf'), trimer=False):
     global Wrap_N_c
     Wrap_N_c = 0
-    return map(lambda x: wrap_str(x, maxlen, width=12, trimer=trimer), list1)
+    return list(map(lambda x: wrap_str(x, maxlen, width=width, trimer=trimer), list1))
 
 
 # wrap an integer list

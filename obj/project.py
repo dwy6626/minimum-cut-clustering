@@ -2,7 +2,6 @@
 from lib import *
 from .system import System
 from .config import Config
-import alg
 import plot
 
 
@@ -203,84 +202,21 @@ class Project:
     def get_output_name(self, str1='_'):
         return self.config.output_path(self.setting.JobName + str1)
 
-    # output controller
-    def output_cluster_results(self, options, latex=False, cost=False):
-        if len(self.data_frame) == 0:
-            return
+    def plot_cost(self, selector=None, save_to_file=False):
+        if selector is None:
+            selector = range(len(self.__systems) + 1)
+        elif isinstance(selector, int):
+            selector = [selector]
 
         for h_id, system in enumerate(self):
-            df = self.data_frame[h_id]
-            for i, (m, n, cgm, _, _) in df.iterrows():
-                judge_ls = (n, 'c')
-
-                if system.has_hamiltonian() and options['I'].intersection(judge_ls):
-                    plot.plot_tf(system, cgm)
-                    print_1_line_stars()
-
-                if options['e'].intersection(judge_ls):
-                    plot.plot_exst(system, allsite='allsite' in self.setting, clx_map=cgm)
-
-                dot = options['d'].intersection(judge_ls)
-                ffa = options['F'].intersection(judge_ls)
-                dynamics = options['M'].intersection(judge_ls)
-                flux = options['p'].intersection(judge_ls)
-                rate = options['r'].intersection(judge_ls)
-
-                if any([dot, ffa, dynamics, flux, rate, cost]):
-                    # tuple: rate matrix, energies, name
-                    cluster = *system.get_cluster(cgm), system.get_plot_name(cgm)
-
-                    # graphviz / dot files
-                    if dot:
-                        nx_aux.nx_graph_draw(
-                            get_cluster_graph(cluster), system, cluster[2] + 'Rate', rc_order=list(cluster[0].keys())
-                        )
-                        print_1_line_stars()
-
-                    if ffa:
-                        alg.flow_analysis(system, cluster)
-                        print_1_line_stars()
-
-                    if rate:
-                        if latex:
-                            alg.print_rate_matrix(cluster[0], pass_int(self.setting['decimal']))
-                        alg.save_rate(cluster[0], cluster[2], cluster[1])
-                        print_1_line_stars()
-
-                    # dynamics
-                    dynamics_opt = [dynamics, flux, cost]
-                    if any(dynamics_opt):
-                        population_dynamics = system.get_dynamics(
-                            cluster,
-                            pyplot_output=dynamics_opt[0],
-                            flux=dynamics_opt[1],
-                            cost=dynamics_opt[2]
-                        )
-                        print_1_line_stars()
-
-                        if cost:
-                            # directly add the result to the end of data frame
-                            df = self.data_frame[h_id]
-                            df.iloc[i, df.columns.get_loc('PopDiff')] = population_dynamics[1]
-
-        if cost:
-            self.plot_cost()
-
-    def plot_cost(self, selector=None):
-        if not selector:
-            selector = range(len(self.__systems))
-        for h_id in selector:
-            system = self.__systems[h_id]
-
-            if not system.is_population_difference_calculated():
-                df = self.data_frame[h_id]
-                for i, (m, n, cgm, _, _) in df.iterrows():
-                    df.iloc[i, df.columns.get_loc('PopDiff')] = system.get_dynamics(cost=True)[1]
+            if h_id not in selector:
+                continue
 
             plot.plot_cost(
                 system,
                 x_max=pass_int(self.setting['cost']),
                 print_marker=self.setting['marker'] == 'true',
                 y_max=pass_float(self.setting.get('ymax', '0.')),
-                legend='nolegend' not in self.setting
+                legend='nolegend' not in self.setting,
+                save_to_file=save_to_file
             )
