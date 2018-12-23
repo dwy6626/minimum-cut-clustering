@@ -213,7 +213,10 @@ class Project:
                 continue
 
             plot.plot_cost(
-                system,
+                *system.get_all_population_difference(
+                    spline_size=pass_int(self.setting['spline']), save_back=True
+                ),
+                system.get_output_name('PopDiff'),
                 x_max=pass_int(self.setting['cost']),
                 print_marker=self.setting['marker'] == 'true',
                 y_max=pass_float(self.setting.get('ymax', '0.')),

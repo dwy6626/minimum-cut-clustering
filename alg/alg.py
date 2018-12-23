@@ -212,7 +212,13 @@ def plot_integrate_flux(integrated_flux_matrix, nodes, energies, plot_name, sett
     nx_aux.nx_graph_draw(graph, dot_path, setting, plot_name + 'IntegratedFlux', rc_order=nodes)
 
 
-def save_rate(rate_matrix, save_name, energies):
+def save_rate(rate_matrix, energies, save_name):
+    """
+    save rate matrix (.csv_ and rate constants input file (.in)
+    :param rate_matrix: n * n rate matrix to save
+    :param energies: n iterable for .in file
+    :param save_name: str, file name suffix
+    """
     if save_name and energies is not None:
         nodes = rate_matrix.keys()
         save_name += 'RateMatrix'

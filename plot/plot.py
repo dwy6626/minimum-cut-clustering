@@ -205,38 +205,39 @@ def plot_series(
 
 
 def plot_cost(
-        system, x_max=100, print_marker=True,
+        pop_diff, number_of_cluster, methods, plot_name,
+        x_max=100, print_marker=True,
         y_max=0, legend=True, save_to_file=False
 ):
-    # https://matplotlib.org/api/markers_api.html#module-matplotlib.markers
+    """
+    plot the population difference
+    :param pop_diff: array of array, population difference
+    :param number_of_cluster: array of array, number of cluster of
+                              given pop_diff, sorted
+    :param methods: array, clustering method name for legend
+    :param plot_name: name suffix of the saved figures
+    :param print_marker: assert to mark data
+    :param x_max: set the x limit of the figures
+    :param y_max: set the y limit of the figures
+    :param legend: (default = True)
+    :param save_to_file: save figure or show only
+    """
 
-    if len(system) > x_max:
+    len_x = max([max(n) for n in number_of_cluster])
+    if len_x > x_max:
         len_x = x_max
-    else:
-        len_x = len(system) - 1
 
-    df = system.back_ptr.data_frame[system.get_index()]
     fig = plt.figure()
     ax = fig.gca()
     i_marker = -1
 
     plot_params = {}
-    for it_m in sorted(set(df['Method']), key=method_to_number):
-
-        # rename methods
-        c_method = paper_method(it_m, set(df['Method']))
-
-        to_plot = df.loc[df['Method'] == it_m]
-        plot_value = to_plot['PopDiff']
-        plot_number = to_plot['N']
-
+    for y_data, x_data, m in zip(pop_diff, number_of_cluster, methods):
+        m_name = paper_method(m)
         if print_marker:
             i_marker += 1
             plot_params['marker'] = Markers[i_marker]
-
-        # draw cost
-        plt.plot(*zip(*sorted(zip(plot_number, plot_value))), label=c_method,
-                 **plot_params)
+        plt.plot(x_data, y_data, label=m_name, **plot_params)
 
     # figure settings
     plt.xlabel('Number of Clusters')
@@ -257,7 +258,7 @@ def plot_cost(
         lgn = plt.legend(loc='upper right')
         fig_objects.append(lgn)
 
-    save_fig(system.get_output_name('PopDiff'), fig_objects, output=save_to_file)
+    save_fig(plot_name, fig_objects, output=save_to_file)
 
 
 def plot_tf(system, clx_map=None, cutoff=0.1, save_to_file=False):

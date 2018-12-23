@@ -31,18 +31,23 @@ class ClusterMap:
                 self.__data.append([n])
                 self[n] = self.__data[-1]
 
-        # some info
-        self.__all_int = True
         for n in self.__dict:
             if not n.isdigit():
-                self.__all_int = False
+                def __sort_key(x):
+                    return x
                 break
+        else:
+            def __sort_key(x):
+                return int(x)
 
+        self.__sort_key = __sort_key
+
+        # some info
         self.method = method
         self.__info = None
-        # self.H_ind = h_id if h_id is not None else network.graph['id']
 
         self.__sorted = False
+        self.__print_decimal = '.' + self.back_ptr.back_ptr.setting['decimal'] + 'f'
 
     def __len__(self):
         return self.__number_of_cluster
@@ -200,20 +205,13 @@ class ClusterMap:
 
     def __sort(self):
         self.__sorted = True
-        if self.__all_int:
-            def __sort_key(x):
-                return int(x)
-
-        else:
-            def __sort_key(x):
-                return x
 
         new_order = []
         # sort node by number
         for i in range(self.__number_of_cluster):
-            new_order.append(sorted(self.__data[i], key=__sort_key))
+            new_order.append(sorted(self.__data[i], key=self.__sort_key))
         # sort cluster by smallest number
-        new_order = sorted(new_order, key=lambda x: __sort_key(x[0]))
+        new_order = sorted(new_order, key=lambda x: self.__sort_key(x[0]))
         self.__data[:self.__number_of_cluster] = new_order
 
         self.__update_pointer()
@@ -222,9 +220,7 @@ class ClusterMap:
         self.__info = str1
 
     def update_cutoff(self, cutoff):
-        self.update_info('Cut = ' +
-                         format(cutoff, '.' + str(self.back_ptr.back_ptr.setting['decimal']) + 'f')
-                         + ':')
+        self.update_info('Cut = ' + format(cutoff, self.__print_decimal) + ':')
 
     def groups(self):
         if not self.__sorted:

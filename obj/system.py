@@ -457,11 +457,12 @@ class System:
         r[:] = undirected_r + undirected_r.T
         return sorted([(u, v, r[u][v]) for u, v in combinations(r.keys(), 2)], reverse=True, key=itemgetter(2))
 
-    def __cluster_handler(self, cluster):
+    def __cluster_handler(self, cluster=None):
         """
         :param cluster: should be
-                        1. tuple: rate matrix, cluster energies, (job name)
-                        2. cluster map object
+                        1. tuple: rate matrix, cluster energies, (plot name)
+                        2. ClusterMap object
+
         :return: rate matrix, energies, job_name
         """
         if cluster is None:
@@ -480,7 +481,7 @@ class System:
             else:
                 print('param: cluster should be \n'
                       '       1. tuple: rate matrix, cluster energies, (job name)\n'
-                      '       2. cluster map object')
+                      '       2. ClusterMap object')
                 raise KeyError
         return rate, cluster_energies, plot_name
 
@@ -614,7 +615,9 @@ class System:
     def __cal_dynamics(self, cluster=None):
         """
         calculate population dynamics and save to self.__pop_tuple (if not clustered)
-        :param cluster: cluster tuple for self.__cluster_handler()
+        :param cluster: should be
+                        1. tuple: rate matrix, cluster energies, ...
+                        2. ClusterMap object
 
         the return object is 3-tuple:
         :return pop_seq: population dynamics
@@ -699,7 +702,8 @@ class System:
         propagate the population dynamics
         :param cluster: should be
                         1. tuple: rate matrix, cluster energies, (job name)
-                        2. cluster map object
+                        2. ClusterMap object
+
         the return object is 3-tuple:
         :return pop_seq: population dynamics
         :return time_sequence: time grids of pop_seq
@@ -741,6 +745,19 @@ class System:
         )
 
     def get_population_difference(self, cluster, pop_cluster=None, spline_size=3000):
+        """
+        calculate the population difference of the given cluster
+        :param cluster: should be
+                        1. tuple: rate matrix, cluster energies, ...
+                        2. ClusterMap object
+
+        :param pop_cluster: reduced population dynamic results (optional)
+        :param spline_size: number of grids on spline when calculating population difference
+        :return: population difference
+        """
+        if isinstance(cluster, ClusterMap):
+            cluster = self.get_cluster(cluster)
+
         if self.__pop_tuple is None:
             print('\ncalculate the full dynamics for comparison')
             self.__cal_dynamics()
@@ -767,6 +784,38 @@ class System:
         pop_diff = b / len(cluster[1]) / spline_size
         print('population dynamics square difference: {:.2e}'.format(pop_diff))
         return pop_diff
+
+    def get_all_population_difference(self, spline_size=3000, save_back=True):
+        """
+        calculate the population difference
+        :param save_back: save the population different to Project.data_frame
+        :param spline_size: number of grids on spline when calculating population difference
+        :return: population difference, number of clusters, methods
+        """
+        if len(self.back_ptr.data_frame) == 0:
+            print('please conduct clustering first!')
+            raise Warning
+
+        df = self.back_ptr.data_frame[self.get_index()]
+        methods = sorted(set(df['Method']), key=method_to_number)
+        return_object = [[], [], methods]
+        for m in methods:
+            cost = []
+            number_of_cluster = []
+            df_methods = df.loc[df['Method'] == m]
+            for i, (_, n, cgm, _, c) in df_methods.iterrows():
+                if c is None:
+                    pop_diff = self.get_population_difference(cgm, spline_size=spline_size)
+                    if save_back:
+                        df.loc[i, 'PopDiff'] = pop_diff
+                else:
+                    pop_diff = c
+                number_of_cluster += [n]
+                cost += [pop_diff]
+            number_of_cluster, cost = zip(*sorted(zip(number_of_cluster, cost)))
+            return_object[0] += [cost]
+            return_object[1] += [number_of_cluster]
+        return return_object
 
     def get_comparison_to_full_dynamics(self, clusters):
         # for population comparison (dash line in dynamics plots of cluster)

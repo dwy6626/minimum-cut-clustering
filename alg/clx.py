@@ -76,9 +76,9 @@ def cut_off_method(system, option=4, pass_map=False):
         3. root mean square
         4. by energy
         5. electronic couplings in Hamiltonian
-    :param pass_map: assert to return the cluster map object
+    :param pass_map: assert to return the ClusterMap object
                      rather than save to the project object
-    :return: cluster map object (only if pass_map is asserted)
+    :return: ClusterMap object (only if pass_map is asserted)
     """
     return_object = {}
 

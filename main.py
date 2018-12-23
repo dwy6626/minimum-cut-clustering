@@ -208,30 +208,30 @@ if len(Project.data_frame) > 0:
 
             if any([dot, ffa, dynamics, flux, rate, cost]):
                 # tuple: rate matrix, energies, name
-                cluster = *system.get_cluster(cgm), system.get_plot_name(cgm)
+                cluster_3_tuple = *system.get_cluster(cgm), system.get_plot_name(cgm)
 
                 # graphviz / dot files
                 if dot:
                     lib.nx_aux.nx_graph_draw(
-                        lib.get_cluster_graph(cluster), dot_path=Project.config.get_graphviz_dot_path(),
-                        setting=Setting, plot_name=cluster[2] + 'Rate', rc_order=list(cluster[0].keys())
+                        lib.get_cluster_graph(cluster_3_tuple), dot_path=Project.config.get_graphviz_dot_path(),
+                        setting=Setting, plot_name=cluster_3_tuple[2] + 'Rate', rc_order=list(cluster_3_tuple[0].keys())
                     )
                     lib.print_1_line_stars()
 
                 if ffa:
-                    alg.flow_analysis(system, cluster)
+                    alg.flow_analysis(system, cluster_3_tuple)
                     lib.print_1_line_stars()
 
                 if rate:
                     if 'l' in cmd_opt:
-                        alg.print_rate_matrix(cluster[0], lib.pass_int(Setting['decimal']))
-                    alg.save_rate(cluster[0], cluster[2], cluster[1])
+                        alg.print_rate_matrix(cluster_3_tuple[0], lib.pass_int(Setting['decimal']))
+                    alg.save_rate(*cluster_3_tuple)
                     lib.print_1_line_stars()
 
                 # dynamics
                 dynamics_opt = [dynamics, flux, cost]
                 if any(dynamics_opt):
-                    pop_seq, time_sequence, nodes = system.get_dynamics(cluster)
+                    pop_seq, time_sequence, nodes = system.get_dynamics(cluster_3_tuple)
                     pop_full = system.get_comparison_to_full_dynamics(nodes)
 
                     # for label is too long: cluster X
@@ -240,7 +240,7 @@ if len(Project.data_frame) > 0:
                     if dynamics:
                         plot.plot_dyanmics(
                             pop_seq, time_sequence, pop_names,
-                            plot_name=cluster[2], pop_seq2=pop_full,
+                            plot_name=cluster_3_tuple[2], pop_seq2=pop_full,
                             y_max=lib.pass_float(Setting.get('ymax', '0.')),
                             x_max=lib.pass_float(Setting.get('xmax', '0.')),
                             legend='nolegend' not in Setting,
@@ -254,11 +254,11 @@ if len(Project.data_frame) > 0:
 
                         if flux:
                             integrated_flux_matrix = alg.get_integrated_flux(
-                                pop_seq2, cluster[0], time_sequence2,
+                                pop_seq2, cluster_3_tuple[0], time_sequence2,
                                 nodes=nodes,
                                 norm=lib.pass_int(Setting.get('multiply', 1)),
                                 plot_details='log' in Setting,
-                                plot_name=cluster[2],
+                                plot_name=cluster_3_tuple[2],
                                 y_max=lib.pass_float(Setting.get('ymax', '0.')),
                                 x_max=lib.pass_float(Setting.get('xmax', '0.')),
                                 divide=lib.pass_int(Setting.get('divide', 100)),
@@ -266,14 +266,14 @@ if len(Project.data_frame) > 0:
                                 save_to_file=True
                             )
                             alg.plot_integrate_flux(
-                                integrated_flux_matrix, nodes, cluster[1], cluster[2],
+                                integrated_flux_matrix, nodes, cluster_3_tuple[1], cluster_3_tuple[2],
                                 Setting, Project.config.get_graphviz_dot_path()
                             )
 
                         if cost:
                             # directly add the result to the end of data frame
                             df.iloc[i, df.columns.get_loc('PopDiff')] = system.get_population_difference(
-                                cluster, pop_seq2, False
+                                cluster_3_tuple, pop_seq2, False
                             )
 
                     lib.print_1_line_stars()

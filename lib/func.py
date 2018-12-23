@@ -256,7 +256,17 @@ def get_figsize_for_position_plot(size):
 
 
 def get_cluster_graph(cluster):
-    # tuple: rate matrix, energies, name
+    """
+    return a networkx graph object for cluster
+    :param cluster: should be
+                    1. tuple: rate matrix, cluster energies, ...
+                    2. ClusterMap object
+    :return:
+    """
+    # tuple: rate matrix, energies
+    from obj.map import ClusterMap
+    if isinstance(cluster, ClusterMap):
+        cluster = cluster.back_ptr.get_cluster(cluster)
     graph = nx.DiGraph()
     graph.add_nodes_from(
         ((cluster[0].keys()[i], {'energy': cluster[1][i]}) for i in range(len(cluster[0].keys())))
