@@ -155,7 +155,15 @@ def get_integrated_flux(
     flux_ls.sort(reverse=True)
     print('{{:{}}}{{:{}}}{{:10}}{{:15}}{{:10}}{{:10}}{{:10}}{{:10}}{{:10}}{{:7}}{{:10}}'.format(name_len, name_len).format(
         'source', 'target', 'maximum', 'equilibrium', 'integral', 'int - eq', 'abs sum', 'forward', 'backward', 'rate', 'backrate'))
-    for f_abs, f_sub, f, fw, bw, i, j in flux_ls:
+
+    if get_module_logger_level() > 20:
+        print_numbers = 3
+    elif get_module_logger_level() > 10:
+        print_numbers = 10
+    else:
+        print_numbers = None
+
+    for f_abs, f_sub, f, fw, bw, i, j in flux_ls[:print_numbers]:
         if f_sub > 0:
             print('{{:{}}}{{:{}}}{{:<10.3f}}{{:<15.4f}}'
                   '{{:<10.3f}}{{:<10.3f}}{{:<10.3f}}{{:<10.3f}}{{:<10.3f}}{{:<7.2f}}{{:<10.2f}}'.format(name_len, name_len).format(
@@ -164,9 +172,9 @@ def get_integrated_flux(
                     f, f_sub, f_abs, fw, bw, rate[i, j], rate[j, i]
             ))
 
-    print('integrate over all abs flux:', format(sum_abs, '.2f'))
-    print('flow matrix:')
-    print(integrated_flux_matrix)
+    print_normal('integrate over all abs flux: {:.2f}'.format(sum_abs))
+    print_normal('flow matrix:')
+    print_normal(integrated_flux_matrix)
 
     if plot_details:
         flux_series = []
@@ -222,7 +230,8 @@ def save_rate(rate_matrix, energies, save_name):
     if save_name and energies is not None:
         nodes = rate_matrix.keys()
         save_name += 'RateMatrix'
-        print('save rate matrix:\n', rate_matrix)
+        print_normal('save rate matrix:')
+        print_normal(rate_matrix)
 
         # input key file
         with open(save_name + '.in', 'w') as f:

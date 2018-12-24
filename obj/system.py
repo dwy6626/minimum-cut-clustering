@@ -87,8 +87,10 @@ class System:
             # find corresponding node names: maximum overlap
             w, eigv = np.linalg.eigh(hamiltonian)
             w0, v0 = np.linalg.eigh(reference.Hamiltonian)
-            self.back_ptr.print_log('eigenvector 0\n', v0.T, '\n')
-            self.back_ptr.print_log('eigenvector\n', eigv.T, '\n')
+            print_more('eigenvector (original)')
+            print_more(v0.T)
+            print_more('eigenvector (disordered)')
+            print_more(eigv.T)
 
             overlaps = v0.T.dot(eigv) ** 2
 
@@ -98,9 +100,9 @@ class System:
             # make the duplicate labels to -2
             dup = find_duplicate(from_v0_max)
             if dup:
-                self.back_ptr.print_log('duplicate terms:', dup)
+                print_more('duplicate terms: {}'.format(dup))
                 for k, v in dup.items():
-                    self.back_ptr.print_log(overlaps[k, v])
+                    print_more(overlaps[k, v])
                     from_v0_max[v[np.argmin(overlaps[k, v])]] = -2
 
             # maximum in new basis
@@ -109,21 +111,21 @@ class System:
             # make the duplicate labels to -2
             dup = find_duplicate(arg_v_max)
             if dup:
-                self.back_ptr.print_log(arg_v_max)
-                self.back_ptr.print_log('duplicate terms:', dup)
+                print_more(arg_v_max)
+                print_more('duplicate terms: {}'.format(dup))
                 for k, v in dup.items():
-                    self.back_ptr.print_log(overlaps[v, k])
+                    print_more(overlaps[v, k])
                     arg_v_max[v[np.argmin(overlaps[v, k])]] = -2
 
             from_v_max = np.ones(len(w0), dtype=int) * -2
             for i, n in enumerate(arg_v_max.flat):
                 if n >= 0:
                     from_v_max[n] = i
-            self.back_ptr.print_log(from_v0_max + 1)
-            self.back_ptr.print_log(from_v_max + 1)
+            print_more(from_v0_max + 1)
+            print_more(from_v_max + 1)
 
             node_name = np.where(from_v_max >= from_v0_max, from_v_max + 1, from_v0_max + 1)
-            self.back_ptr.print_log(node_name, '\n')
+            print_more(node_name, '\n')
 
             # unnamed nodes: -1 (-2 + 1)
             if len(node_name[node_name == -1]) == 1:
@@ -134,7 +136,8 @@ class System:
             if len(node_name[node_name == -1]) == 2:
                 v_remain = np.where(node_name == -1)[0]
                 v0_remain = np.array([i for i in range(1, len(w0) + 1) if i not in node_name]) - 1
-                print(v_remain, v0_remain)
+                print_more(v_remain)
+                print_more(v0_remain)
                 overlap_remain = overlaps[v0_remain, :][:, v_remain]
 
                 arg_v0_max = np.argmax(overlap_remain, axis=0)
@@ -142,9 +145,10 @@ class System:
 
                 from_v0_max = list(v0_remain[arg_v0_max])
                 from_v_max = list(v_remain[arg_v_max])
-                self.back_ptr.print_log(overlaps)
-                self.back_ptr.print_log(overlap_remain)
-                self.back_ptr.print_log(from_v0_max, from_v_max)
+                print_more(overlaps)
+                print_more(overlap_remain)
+                print_more(from_v0_max)
+                print_more(from_v_max)
 
                 if not has_duplicate(from_v0_max):
                     for i, n in enumerate(node_name.flat):
@@ -154,13 +158,12 @@ class System:
             # corresponding overlap array: overlap between new basis and old basis
             corres_overlap_array = np.diag(overlaps[node_name - 1])
             node_name = [str(i) for i in node_name]
-            self.back_ptr.print_log('New node names:', node_name)
+            print_more('New node names:', node_name)
 
             # overlap factor: the average overlap
             overlap_factor = sum(corres_overlap_array) / len(corres_overlap_array) * 100
-            if 'log' in self.back_ptr.setting:
-                print('corresponding overlap with original states:', corres_overlap_array)
-                print('the total overlap factors: {:.2f}%'.format(overlap_factor))
+            print_more('corresponding overlap with original states: {}'.format(corres_overlap_array))
+            print_more('the total overlap factors: {:.2f}%'.format(overlap_factor))
 
             # pass the diagnosis: yield the H
             # otherwise, regenerate one
@@ -184,8 +187,8 @@ class System:
                     )[indexing, ][:, indexing],
                     columns=self.ExcitonName, index=self.ExcitonName
                 )
-                print('Rate constants, by labels')
-                print(self.RateConstantMatrix)
+                print_normal('Rate constants, by labels')
+                print_normal(self.RateConstantMatrix)
                 print_1_line_stars()
                 break
 
@@ -234,7 +237,8 @@ class System:
         delta = len(self) - len(lines[0])
         for i in range(delta):
             self.SiteName += ["extra {}".format(i)]
-        print('Sites:\n', self.SiteName)
+        print_normal('Sites:')
+        print_normal(self.SiteName)
 
         h = np.array(lines, dtype=float)
         if extend_with_identity:
@@ -248,13 +252,11 @@ class System:
 
         self.ExcitonEnergies, self.EigenVectors = np.linalg.eigh(h)
         self.Hamiltonian = h
-        print('Hamiltonian:')
-        print(self.Hamiltonian)
+        print_normal('Hamiltonian:')
+        print_normal(self.Hamiltonian)
 
-        print('Basis transition matrix:')
-        print(self.EigenVectors)
-        self.back_ptr.print_log('U square:')
-        self.back_ptr.print_log(self.EigenVectors ** 2)
+        print_more('EigenVectors:')
+        print_more(self.EigenVectors)
 
     def load_key(self, argv):
         def in_format_error():
@@ -297,7 +299,7 @@ class System:
             else:
                 in_format_error()
 
-        print('Size = {}'.format(len(self)))
+        print_normal('Size = {}'.format(len(self)))
         self.ExcitonEnergies = list(map(float, lines[:len(self)]))
         self.RateConstantMatrix = pd.DataFrame(np.array(lines[len(self):], dtype=float).reshape(len(self), -1),
                                                columns=self.ExcitonName, index=self.ExcitonName)
@@ -317,11 +319,11 @@ class System:
             self.ExcitonEnergies, self.ExcitonName = zip(*sorted(zip(self.ExcitonEnergies, self.ExcitonName)))
         self.RateConstantMatrix = self.RateConstantMatrix.loc[self.ExcitonName, self.ExcitonName]
 
-        print("Exciton States: \n    {}".format(self.ExcitonName))
-        print('State Energies: \n    {}'.format(self.ExcitonEnergies))
+        print_normal("Exciton States: \n    {}".format(self.ExcitonName))
+        print_normal('State Energies: \n    {}'.format(self.ExcitonEnergies))
 
-        print('Rate constants: ')
-        print(self.RateConstantMatrix)
+        print_normal('Rate constants: ')
+        print_normal(self.RateConstantMatrix)
 
     def __len__(self):
         return self.__NumberSite
@@ -416,12 +418,12 @@ class System:
         # target: simple sum
         rate = np.concatenate([[np.sum(rate[i, :], axis=0)] for i in indices], axis=0)
 
-        print('rate constant matrix:')
+        print_normal('rate constant matrix:')
         cluster_rate = pd.DataFrame(rate, columns=cluster_names, index=cluster_names)
-        print(cluster_rate)
+        print_normal(cluster_rate)
 
-        print('cluster energies:')
-        print(cluster_energies)
+        print_normal('cluster energies:')
+        print_normal(cluster_energies)
 
         return cluster_rate, cluster_energies
 
@@ -503,7 +505,7 @@ class System:
             pop_seq2 = self.get_comparison_to_full_dynamics(clusters)
 
             # for label is too long: cluster X
-            pop_names = wraps(clusters, maxlen=30)
+            pop_names = wraps(clusters, maxlen=max_name_len)
 
             plot.plot_dyanmics(
                 pop_seq, time_sequence, pop_names, plot_name,
@@ -531,7 +533,7 @@ class System:
         # basis transform for original network
         # if H_eff is provided
         if self.has_hamiltonian() and 'site' in setting and not is_clustered:
-            print('--site: change to site basis')
+            print_normal('--site: change to site basis')
             pop_seq_site = np.dot(self.EigenVectors ** 2, pop_seq)
             plot.plot_dyanmics(
                 pop_seq_site, time_sequence, self.SiteName, plot_name + 'Site_',
@@ -605,10 +607,10 @@ class System:
             wrap_nodes = [wrap_str(n) for n in nodes]
 
         name_len = max([max([len(n) for n in wrap_nodes]) + 1, 10])
-        print('initial populations:')
+        print_normal('initial populations:')
         for n, p in zip(wrap_nodes, pop.flat):
-            print('{{:{}}}: {{:.2f}}'.format(name_len).format(n, p))
-        print()
+            print_normal('{{:{}}}: {{:.2f}}'.format(name_len).format(n, p))
+        print_normal('')
 
         return pop.reshape(-1, 1)
 
@@ -642,7 +644,7 @@ class System:
         propagate_time = pass_int(setting['time'])
         time_grid = pass_int(setting['grid'])
         time_sequence = np.linspace(0, propagate_time, time_grid)
-        print(
+        print_normal(
             'dynamics propagation setting:\n'
             '  propagate time: {} ps\n'
             '  grids on time: {}\n'.format(propagate_time, time_grid)
@@ -651,7 +653,7 @@ class System:
         pop = self.get_initial_populations(nodes, energies, clusters, cluster_energies)
 
         # propagation
-        if 'log' in setting:
+        if get_module_logger_level() < 20:
             print('start dynamics calculation')
             timer_start = timeit.default_timer()
 
@@ -690,7 +692,7 @@ class System:
         return alg.get_integrated_flux(
                 pop_seq2, rate, time_sequence2,
                 norm=pass_int(setting.get('multiply', 1)),
-                plot_details='log' in setting,
+                plot_details='flowplot' in setting,
                 plot_name=plot_name,
                 y_max=y_max, x_max=x_max,
                 legend='nolegend' not in setting,
@@ -759,7 +761,7 @@ class System:
             cluster = self.get_cluster(cluster)
 
         if self.__pop_tuple is None:
-            print('\ncalculate the full dynamics for comparison')
+            print_normal('\ncalculate the full dynamics for comparison')
             self.__cal_dynamics()
 
         # provided propagation result
@@ -782,7 +784,7 @@ class System:
 
         b = sum(sum((pop_full - pop_cluster) ** 2))
         pop_diff = b / len(cluster[1]) / spline_size
-        print('population dynamics square difference: {:.2e}'.format(pop_diff))
+        print_normal('population dynamics square difference: {:.2e}'.format(pop_diff))
         return pop_diff
 
     def get_all_population_difference(self, spline_size=3000, save_back=True):
@@ -822,7 +824,7 @@ class System:
 
         # check if full network dynamics is calculated
         if self.__pop_tuple is None:
-            print('\ncalculate the full dynamics for comparison')
+            print_normal('\ncalculate the full dynamics for comparison')
             self.__cal_dynamics()
 
         pop_seq, _, time_grid = self.__pop_tuple

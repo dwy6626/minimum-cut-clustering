@@ -1,4 +1,5 @@
 from . import nx_pydot
+from .. import module_log
 
 
 def nx_graph_draw(ref_graph, dot_path='', setting=None, plot_name='', label='weight', e_name='energy', rc_order=None):
@@ -121,8 +122,8 @@ def nx_graph_draw(ref_graph, dot_path='', setting=None, plot_name='', label='wei
     # use pydot and system cmd instead of pygraphviz (which is out-of-date)
     with open(dot_file, 'w') as f:
         nx_pydot.write_dot(graph, f)
-    print('write dot file:', dot_file)
+    module_log.print_normal('write dot file: {}'.format(dot_file))
 
     if dot_path:
         os.system(dot_path + " -T" + file_format + " " + dot_file + " -o " + image_file)
-        print('plot graph:', image_file)
+        module_log.print_normal('plot graph: {}'.format(image_file))

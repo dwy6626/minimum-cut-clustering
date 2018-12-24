@@ -2,6 +2,14 @@
 from lib import *
 
 
+string_to_logger_level = {
+    # 'verbose': verboselogs.VERBOSE,
+    'verbose': logging.DEBUG,
+    'normal': logging.INFO,
+    'quiet': logging.WARNING
+}
+
+
 # ============================================================
 
 
@@ -9,10 +17,10 @@ class Setting:
     def __init__(self):
         # now, in 24-hour format
         # %H = 24-hour, %l = 12-hour
-        print("Now: " + strftime("%X, %x"))
+        print_normal("Now: " + strftime("%X, %x"))
 
-        print("Terminal path: ")
-        print("  " + os.getcwd(), '\n')
+        print_normal("Terminal path: ")
+        print_normal("  " + os.getcwd() + '\n')
 
         print_1_line_stars()
 
@@ -84,7 +92,6 @@ class Setting:
             self.JobName = default_name
 
         run_opt = option_set, sorted(clx_opt), cmd_opt
-        self.print_all(*run_opt)
 
         # update matplotlib rc from arguments
         mpl_update = {
@@ -97,9 +104,35 @@ class Setting:
         temperature = pass_float(self.get('temperature'))
         lambda0 = pass_float(self.get('lambda'))
         gamma0 = pass_float(self.get('gamma'))
+
+        # set logging option
+        if 'v' in cmd_opt:
+            logger_option = 'verbose'
+        elif 'q' in cmd_opt:
+            logger_option = 'quiet'
+        else:
+            logger_option = 'normal'
+
+        self.set_logger(logger_option)
+        if get_module_logger_level() < 30:
+            self.print_all(*run_opt)
+
         if temperature > 0 and lambda0 > 0 and gamma0 > 0:
             self.set_mrt_params([temperature, lambda0, gamma0])
         return run_opt
+
+    @staticmethod
+    def set_logger(string):
+        """
+        set the logger level
+        :param string: 'verbose' / 'normal' / 'quiet'
+               otherwise, input is ignored
+        """
+        if string in string_to_logger_level:
+            module_log.set_module_logger(string_to_logger_level[string])
+        else:
+            print('please choose the following one mode:')
+            print(string_to_logger_level.keys())
 
     def print_all(self, option_set=None, clx_opt=None, cmd_opt=None):
         if not option_set:
@@ -157,10 +190,10 @@ class Setting:
             else:
                 self.set_mrt_params()
 
-        print('parameters for spectral density:')
-        print('    T = ', self.__mrt_param[0])
-        print('    Reorganization Energy = ', self.__mrt_param[1])
-        print('    Cut-off Frequency = ', self.__mrt_param[2])
+        print_normal('parameters for spectral density:')
+        print_normal('    T = {:.2f}'.format(self.__mrt_param[0]))
+        print_normal('    Reorganization Energy = {:.2e}'.format(self.__mrt_param[1]))
+        print_normal('    Cut-off Frequency = {:.2e}'.format(self.__mrt_param[2]))
 
         return self.__mrt_param
 

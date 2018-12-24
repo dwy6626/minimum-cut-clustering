@@ -85,7 +85,7 @@ class Project:
 
     def load_file(self, path):
         path = self.input_path(path)
-        print("loading file at:\n    {}".format(path))
+        print_normal("loading file at:\n    {}".format(path))
         with open(path, 'r', encoding='utf-8-sig') as f:
             file_str = f.read()
         return file_str
@@ -128,7 +128,7 @@ class Project:
                     self.SitePos[i] = coordinates[site]
                 except KeyError:
                     print("Site name doesn't match")
-                print(site, self.SitePos[i])
+                print_normal('{}: {}'.format(site, self.SitePos[i]))
         elif len(lines[0]) == 3:
             # x, y, z
             for i, l in enumerate(lines):
@@ -136,7 +136,7 @@ class Project:
                     self.SitePos[i] = l
                 except ValueError:
                     print("[x, y, z] should be numbers")
-                print(self.__reference_system.SiteName[i], self.SitePos[i])
+                print_normal('{}: {}'.format(self.__reference_system.SiteName[i], self.SitePos[i]))
         else:
             raise ValueError("[site, x, y, z] should be provided in the position input file")
 
@@ -167,24 +167,24 @@ class Project:
     def save(self):
         if len(self.disorders) > 1:
             shift_file = self.get_output_name('_disorder.csv')
-            print('save disorder values:', shift_file)
+            print_normal('save disorder values:', shift_file)
             np.savetxt(shift_file,
                        reduce(lambda x, y: np.append(x, y, axis=0), self.disorders),
                        delimiter=",", fmt='%.8f')
 
         if self.discard_disorders:
             shift_file = self.get_output_name('_discard_disorder.csv')
-            print('save discard disorder values:', shift_file)
+            print_normal('save discard disorder values:', shift_file)
             np.savetxt(shift_file,
                        reduce(lambda x, y: np.append(x, y, axis=0), self.discard_disorders),
                        delimiter=",", fmt='%.8f')
 
         if len(self.data_frame) == 0:
             return
-        print(self)
+        print_normal(self)
 
         cgm_file = self.get_output_name('.p')
-        print('save the clustering results to python3 pickle file (binary):', cgm_file)
+        print_normal('save the clustering results to python3 pickle file (binary): {}'.format(cgm_file))
         with open(cgm_file, 'wb') as f:
             pk.dump(self, f)
         self.save_raw()
@@ -192,12 +192,8 @@ class Project:
     # to a .csv file, raw data format
     def save_raw(self):
         raw_file = self.get_output_name("_results.csv")
-        print('save the clustering results to .csv file:', raw_file)
+        print_normal('save the clustering results to .csv file: {}'.format(raw_file))
         self.concat().to_csv(raw_file)
-
-    def print_log(self, *strs, **kwargs):
-        if 'log' in self.setting:
-            print(*strs, **kwargs)
 
     def get_output_name(self, str1='_'):
         return self.config.output_path(self.setting.JobName + str1)
