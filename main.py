@@ -34,7 +34,7 @@ Project.build_reference_system(
     additional_hamiltonian_load=Setting.get('H')
 )
 
-print('Job started.\n')
+lib.print_normal('Job started.\n')
 lib.print_1_line_stars()
 
 # ============================================================
@@ -193,20 +193,25 @@ if len(Project.data_frame) > 0:
         for i, (m, n, cgm, _, _) in df.iterrows():
             judge_ls = (n, 'c')
 
-            if system.has_hamiltonian() and opt_set['I'].intersection(judge_ls):
-                plot.plot_tf(system, cgm)
-                lib.print_1_line_stars()
-
-            if opt_set['e'].intersection(judge_ls):
-                plot.plot_exst(system, allsite='allsite' in Setting, clx_map=cgm)
-
             dot = opt_set['d'].intersection(judge_ls)
             ffa = opt_set['F'].intersection(judge_ls)
             dynamics = opt_set['M'].intersection(judge_ls)
             flux = opt_set['p'].intersection(judge_ls)
             rate = opt_set['r'].intersection(judge_ls)
+            info = system.has_hamiltonian() and opt_set['I'].intersection(judge_ls)
+            exciton_plot = opt_set['e'].intersection(judge_ls)
 
-            if any([dot, ffa, dynamics, flux, rate, cost]):
+            if any([dot, ffa, dynamics, flux, rate, info, exciton_plot]):
+                print('{} {}-cluster model'.format(m, n))
+
+            if info:
+                plot.plot_tf(system, cgm)
+                lib.print_1_line_stars()
+
+            if exciton_plot:
+                plot.plot_exst(system, allsite='allsite' in Setting, clx_map=cgm)
+
+            if any([dot, ffa, dynamics, flux, rate]):
                 # tuple: rate matrix, energies, name
                 cluster_3_tuple = *system.get_cluster(cgm), system.get_plot_name(cgm)
 
@@ -257,7 +262,7 @@ if len(Project.data_frame) > 0:
                                 pop_seq2, cluster_3_tuple[0], time_sequence2,
                                 nodes=nodes,
                                 norm=lib.pass_int(Setting.get('multiply', 1)),
-                                plot_details='log' in Setting,
+                                plot_details='flowplot' in Setting,
                                 plot_name=cluster_3_tuple[2],
                                 y_max=lib.pass_float(Setting.get('ymax', '0.')),
                                 x_max=lib.pass_float(Setting.get('xmax', '0.')),

@@ -40,8 +40,8 @@ def ford_fulkerson_impl(G, s, t, path_decomposition=False, cutoff=0.0001):
         path_ls.append([path_nodes, path_capacity])
 
         flow_value += path_capacity
-        print('path:', path_nodes)
-        print('  flow: {:.3f}, total flow: {:.3f}'.format(path_capacity, flow_value))
+        print_more('path: {}'.format(path_nodes))
+        print_more('  flow: {:.3f}, total flow: {:.3f}'.format(path_capacity, flow_value))
 
         # Augment the flow along the path.
         for u, v in path_edges:
@@ -247,9 +247,9 @@ def flow_analysis(system, cluster=None, draw=False):
     max_flow, _ = ford_fulkerson(network, source, target, path_decomposition=True)
     print('flow: ', format(max_flow, '.2f'))
 
-    print('flow matrix:')
+    print_normal('flow matrix:')
     flow_matrix = nx.linalg.attrmatrix.attr_matrix(network, edge_attr=FFAName, rc_order=order).T
-    print(flow_matrix)
+    print_normal(flow_matrix)
 
     if draw:
         nx_aux.nx_graph_draw(network, system.back_ptr.config.get_graphviz_dot_path(), setting,

@@ -73,6 +73,11 @@ OPTIONS
             [c] will give all the clustering results
         The default (e.g.: -r) value is [n,c]
 
+    -v  More commend line output
+
+    -q  Less commend line output  (if -v is also asserted, this will NOT take effect)
+
+
 DICTIONARIES
     H=[File]
         Use effective Hamiltonian to transform the exciton basis results into site basis results
@@ -148,11 +153,11 @@ DICTIONARIES
 
 
 KEYWORD
-    --log
-        more output in commend lines
-
     --labelorder
         sort nodes by string order
+
+    --flowplot
+        save figures: integrated flux and flux (vs time) (when -p asserted)
 
     --site
         plot population dynamics on site basis (when -M asserted and Hamiltonian is provided)

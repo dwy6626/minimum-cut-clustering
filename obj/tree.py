@@ -52,8 +52,8 @@ class MinCutTree:
         """
         build the
         """
-        print('Start generating min-cut tree using Ford-Fulkerson algorithms.')
-        print('Augment path: maximum bottleneck path')
+        print_normal('Start generating min-cut tree using Ford-Fulkerson algorithms.')
+        print_normal('Augment path: maximum bottleneck path')
         self.__build(self.back_ptr.get_graph(), self.root)
 
     def __build(self, graph, root):
@@ -66,7 +66,7 @@ class MinCutTree:
         source = self.get_source(root.val)
         target = self.get_target(root.val)
 
-        print('source: {}, target: {}'.format(source, target))
+        print_normal('source: {}, target: {}'.format(source, target))
 
         # main part: do the minimum cut by FFA!
         root.max_flow, cuts = alg.ford_fulkerson(graph.subgraph(root.val), source, target)
@@ -78,7 +78,7 @@ class MinCutTree:
         root.left.p = root.right.p = root
 
         # To know where is the process
-        print('source subgraph: {}\ntarget subgraph: {}\n'.format(*cuts))
+        print_normal('source subgraph: {}\ntarget subgraph: {}\n'.format(*cuts))
 
         # keep doing FFA until all nodes are isolated:
         self.__build(graph, root.left)
@@ -118,7 +118,7 @@ class MinCutTree:
         else:
             self.__normalization_setting = s
             if self.__normalization_setting[1]:
-                print('Normalize min-cut tree')
+                print_normal('Normalize min-cut tree')
 
     def copy(self):
         """
@@ -154,7 +154,7 @@ class MinCutTree:
         """
         for i, b in enumerate(self.__normalization_setting):
             if b:
-                print(
+                print_normal(
                     ['maximum flow normalized',
                      'maximum flow not normalized (_uN)'][i]
                 )
@@ -173,7 +173,7 @@ class MinCutTree:
         for run_name, norm in self.run(file_name):
             dot_file = run_name + '.dot'
             image_file = run_name + '.' + file_format
-            print('Plot the min-cut binary tree into ' + image_file)
+            print_normal('Plot the min-cut binary tree into ' + image_file)
             self.__to_dot(dot_file, norm)
             if dot_path:
                 os.system(dot_path + " -T" + file_format + " " + dot_file + " -o " + image_file)
@@ -223,7 +223,7 @@ class MinCutTree:
         return r
 
     def __to_dot(self, file_name, norm):
-        print('write dot file:', file_name)
+        print_normal('write dot file: {}'.format(file_name))
 
         setting = self.back_ptr.back_ptr.setting
         color_dict = plot.node_color_energy(self.back_ptr.ExcitonName,

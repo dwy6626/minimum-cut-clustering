@@ -33,14 +33,10 @@ class ClusterMap:
 
         for n in self.__dict:
             if not n.isdigit():
-                def __sort_key(x):
-                    return x
+                self.__sort_key = sort_str_key
                 break
         else:
-            def __sort_key(x):
-                return int(x)
-
-        self.__sort_key = __sort_key
+            self.__sort_key = sort_int_key
 
         # some info
         self.method = method
@@ -273,3 +269,16 @@ class ClusterMap:
         sr = pd.Series((m, n, mp, olfac, c), index=proj.col)
 
         df.loc[len(proj.data_frame[h])] = sr
+
+
+# ============================================================
+
+
+def sort_str_key(x):
+    return x
+
+
+def sort_int_key(x):
+    return int(x)
+
+

@@ -17,5 +17,6 @@ from scipy import integrate
 
 # import local modules
 from .func import *
-from . import nx_aux
 from .wrap import *
+from .module_log import *
+from . import nx_aux

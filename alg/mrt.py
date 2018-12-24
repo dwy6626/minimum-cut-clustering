@@ -5,8 +5,8 @@ from lib import *
 
 def modified_Redfield_theory_calculation(hamiltonian, temperature, reorganization_energy, cutoff_freq):
     beta = get_beta_from_T(temperature)
-    print('utilize modified Redfield theory to obtain rate constant matrix')
-    print('bath: Over-damped Brownian Oscillators')
+    print_normal('utilize modified Redfield theory to obtain rate constant matrix')
+    print_normal('bath: Over-damped Brownian Oscillators')
     size = hamiltonian.shape[0]
     rate = np.zeros((size, size))
     cm_to_fs = 5309.1
@@ -37,8 +37,8 @@ def modified_Redfield_theory_calculation(hamiltonian, temperature, reorganizatio
     rate[np.diag_indices_from(rate)] = 0
     rate -= np.diag(np.sum(rate, axis=0))
 
-    print('Rate constants:')
-    print(rate)
+    print_normal('Rate constants:')
+    print_normal(rate)
     return rate
 
 

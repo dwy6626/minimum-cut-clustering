@@ -43,20 +43,6 @@ def string_to_lines(str1):
     return [l for l in lines if l]
 
 
-# Print many stars
-def print_stars():
-    for i in range(72):
-        print("*", end="")  # no new line
-    print()  # new line
-
-
-# Print many many stars
-def print_1_line_stars():
-    print()
-    print_stars()
-    print()
-
-
 # Print help message
 def help_message(exit_id=1):
     from os import popen

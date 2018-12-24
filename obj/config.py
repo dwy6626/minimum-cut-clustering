@@ -63,7 +63,7 @@ class Config:
         # avoid backend error
         import platform
         local_os = platform.system()
-        print('Your os is', local_os, '\n')
+        print_normal('Your os is {}\n'.format(local_os))
         if local_os == 'Linux' and not self.__is_colab:
             # if cannot modify backend, than don't do that
             try:
@@ -86,7 +86,7 @@ class Config:
             dot_path_file = os.popen('ls ' + CheckFile).read()
             if not dot_path_file:
                 # check graphviz:
-                print("Check graphviz: ")
+                print_normal("Check graphviz: ")
                 dot_path = os.popen('which dot').read()
 
                 if not dot_path:
@@ -106,7 +106,7 @@ class Config:
                         dot_path = ''
 
                 else:
-                    print("  " + dot_path)
+                    print_normal("  " + dot_path)
 
                 if dot_path:
                     with open(CheckFile, 'w') as f:

@@ -80,7 +80,7 @@ def save_fig(name, things=None, output=True):
     :return:
     """
     if output:
-        print('save figure:', name)
+        print_normal('save figure: {}'.format(name))
         plt.savefig(fname='{}'.format(name), bbox_extra_artists=things, bbox_inches='tight')
         plt.close()
     else:
@@ -262,7 +262,7 @@ def plot_cost(
 
 
 def plot_tf(system, clx_map=None, cutoff=0.1, save_to_file=False):
-    print('option -I: site-exciton corresponding plot')
+    print_normal('option -I: site-exciton corresponding plot')
 
     def pickup_str(str1, str2):
         r = ''
@@ -360,8 +360,6 @@ def plot_tf(system, clx_map=None, cutoff=0.1, save_to_file=False):
     # y grid
     things = []
     name_ls = excitons.copy()
-    print(name_ls)
-    print(energies)
 
     # check too close y: j and j+1
     for i, y in enumerate(energies[:-1]):
@@ -508,7 +506,7 @@ def population_animatation(
         pop_seq, pos_file, site_names, eigenvectors, time_sequence, anime_name,
         dpi=100, ps1=False, maxsize=20000, allsite=False
 ):
-    print('Animate population dynamics')
+    print_normal('Animate population dynamics')
 
     size, length = np.shape(pop_seq)
     fig = plt.figure(figsize=get_figsize_for_position_plot(size))
@@ -540,14 +538,14 @@ def population_animatation(
         _size_ar = np.vectorize(get_pattern_size)(pop_seq[:, frame].dot(eigenvectors), maxsize=maxsize)
         scat.set_sizes(_size_ar[0])
         scat.set_facecolors(_size_ar[1])
-        print('frame {}, {:.2f} ps'.format(frame, _time))
+        print_more('frame {}, {:.2f} ps'.format(frame, _time))
 
     animation = anim.FuncAnimation(fig, pop_update, frames=length)
 
     # Set up formatting for the movie files
     writer = anim.writers['ffmpeg'](metadata=dict(artist='YCC lab'), fps=20)
     name = anime_name + '.mp4'
-    print('save animation: {}'.format(name))
+    print_normal('save animation: {}'.format(name))
     animation.save(name, writer=writer, dpi=dpi)
 
 
