@@ -72,13 +72,8 @@ for h_id, system in enumerate(Project):
 
     # option -I: site-exciton corresponding diagram
     if system.has_hamiltonian() and judge_set.intersection(opt_set['I']):
-        plot.plot_exciton_population_on_site_basis(
-            system.ExcitonName, system.ExcitonEnergies, system.SiteName, system.EigenVectors,
-            site_order=site_order,
-            ref_exciton_names=system.get_original().ExcitonName,
-            ref_exciton_energies=system.get_original().ExcitonEnergies,
-            plot_name=system.get_plot_name(),
-            save_to_file=True
+        system.plot_exciton_population_on_site_basis(
+            site_order=site_order, save_to_file=True
         )
 
     # option -e: plot exciton population on each site
@@ -230,13 +225,8 @@ if len(Project.data_frame) > 0:
                 print('{} {}-cluster model'.format(m, n))
 
             if info:
-                plot.plot_exciton_population_on_site_basis(
-                    system.ExcitonName, system.ExcitonEnergies, system.SiteName, system.EigenVectors,
-                    site_order=site_order, clx_map=cgm,
-                    ref_exciton_names=system.get_original().ExcitonName,
-                    ref_exciton_energies=system.get_original().ExcitonEnergies,
-                    plot_name=system.get_plot_name(cgm),
-                    save_to_file=True
+                system.plot_exciton_population_on_site_basis(
+                    cluster_map=cgm, site_order=site_order, save_to_file=True
                 )
                 lib.print_1_line_stars()
 

@@ -835,3 +835,20 @@ class System:
                 if n in g.split():
                     pop_full[v] += pop_seq[i]
         return pop_full
+
+    def plot_exciton_population_on_site_basis(self, cluster_map=None, site_order=None, save_to_file=False):
+        """
+        provide an interface to plot exciton population on sites
+        all parameters ara optional
+        :param cluster_map: ClusterMap object
+        :param site_order: specify the site order in the x-axis
+        :param save_to_file: save figure or show only
+        """
+        plot.plot_exciton_population_on_site_basis(
+            self.ExcitonName, self.ExcitonEnergies, self.SiteName, self.EigenVectors,
+            site_order=site_order, clx_map=cluster_map,
+            ref_exciton_names=self.get_original().ExcitonName,
+            ref_exciton_energies=self.get_original().ExcitonEnergies,
+            plot_name=self.get_plot_name(cluster_map),
+            save_to_file=save_to_file
+        )
