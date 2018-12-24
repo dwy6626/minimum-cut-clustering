@@ -46,16 +46,40 @@ if 'k' in cmd_opt:
     alg.check_rate(Project.get_reference_system())
     lib.print_1_line_stars()
 
+# choose the site order for -I
+
+LHCIImon_IDls = [
+    'a613', 'a614', 'a604', 'b607', 'b605', 'b606', 'b608', 'b609', 'a603', 'a602', 'a611', 'a612', 'a610', 'b601'
+]
+
+FMO_IDls = [
+    'BChl8', 'BChl1', 'BChl2', 'BChl3', 'BChl4', 'BChl7', 'BChl6', 'BChl5'
+]
+
+site_order = None
+if 'FMO' in Setting.InputFileName and len(Project.get_reference_system()) == 8:
+    site_order = FMO_IDls
+elif 'LHC' in Setting.InputFileName and len(Project.get_reference_system()) == 14:
+    site_order = LHCIImon_IDls
+
 judge_set = {'n', len(Project.get_reference_system())}
 
-for system in Project:
+for h_id, system in enumerate(Project):
+    print('Hamiltonian number: {}'.format(h_id))
     # option -l print latex code (Hamiltonian, rate matrix)
     if 'l' in cmd_opt:
         alg.print_latex_matrix(system, decimal=lib.pass_int(Setting['decimal']))
 
     # option -I: site-exciton corresponding diagram
-    if system.has_hamiltonian() and 'n' in opt_set['I']:
-        plot.plot_tf(system)
+    if system.has_hamiltonian() and judge_set.intersection(opt_set['I']):
+        plot.plot_exciton_population_on_site_basis(
+            system.ExcitonName, system.ExcitonEnergies, system.SiteName, system.EigenVectors,
+            site_order=site_order,
+            ref_exciton_names=system.get_original().ExcitonName,
+            ref_exciton_energies=system.get_original().ExcitonEnergies,
+            plot_name=system.get_plot_name(),
+            save_to_file=True
+        )
 
     # option -e: plot exciton population on each site
     if judge_set.intersection(opt_set['e']):
@@ -190,6 +214,7 @@ if len(Project.data_frame) > 0:
     cost = 'c' in cluster_opt
     for h_id, system in enumerate(Project):
         df = Project.data_frame[h_id]
+        print('Hamiltonian number: {}'.format(h_id))
         for i, (m, n, cgm, _, _) in df.iterrows():
             judge_ls = (n, 'c')
 
@@ -205,7 +230,14 @@ if len(Project.data_frame) > 0:
                 print('{} {}-cluster model'.format(m, n))
 
             if info:
-                plot.plot_tf(system, cgm)
+                plot.plot_exciton_population_on_site_basis(
+                    system.ExcitonName, system.ExcitonEnergies, system.SiteName, system.EigenVectors,
+                    site_order=site_order, clx_map=cgm,
+                    ref_exciton_names=system.get_original().ExcitonName,
+                    ref_exciton_energies=system.get_original().ExcitonEnergies,
+                    plot_name=system.get_plot_name(cgm),
+                    save_to_file=True
+                )
                 lib.print_1_line_stars()
 
             if exciton_plot:

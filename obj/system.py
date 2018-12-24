@@ -438,7 +438,7 @@ class System:
         :return rate constant matrix (symmetric)
         """
         if option == 5:
-            return sorted([(self.SiteName[i], self.SiteName[j], abs(self.Hamiltonian.matrix[i, j]))
+            return sorted([(self.SiteName[i], self.SiteName[j], abs(self.Hamiltonian[i, j]))
                            for i, j in combinations(range(len(self)), 2)], reverse=True, key=itemgetter(2))
 
         r = self.RateConstantMatrix.values

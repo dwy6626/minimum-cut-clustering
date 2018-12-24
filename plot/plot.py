@@ -23,72 +23,12 @@ Markers = [
     'x', '+', 'o', 'd', '^', 'v', '>', '<', '1', '2', '3', '4', 'o', '*', 'h', 'D'
 ]
 
-LHCIImon_IDls_SchlauCohen = [
-    5, 6, 4, 3, 13, 12, 9, 11, 10, 1, 2, 8, 7, 0
-]
-
-LHCIImon_IDls_InstFlux = [
-    12, 13, 3, 5, 7, 8, 6, 4, 9, 11, 10, 2, 1, 0
-]
-
-LHCIImon_IDls = [
-    12, 13, 3, 6, 4, 5, 7, 8, 2, 1, 10, 11, 9, 0
-]
-
-FMO_IDls = [
-    7, 0, 1, 2, 3, 6, 5, 4
-]
 
 # ============================================================
 
 
-def node_color_energy(nodes, energies):
-    energy_list = sorted(zip(energies, nodes))
-
-    cmap2 = colormap(len(nodes), bright=True)
-    cmap2.reverse()
-
-    return {energy_list[i][1]: rgb2hex(cmap2[i]) for i in range(len(nodes))}
-
-
-def colormap(color_number=256, shift=0, bright=False, dark=False, transparency=1, color_map='rainbow'):
-    cmap2 = []
-    cmap = plt.cm.get_cmap(color_map, color_number + shift * 2)
-    for i in range(color_number):
-        rgb = cmap(shift + i)[:3]  # first 3 : rgb
-        if bright:
-            hsv = rgb_to_hsv(rgb)
-            hsv[-1] = 1
-            hsv[-2] *= .6
-            rgb = hsv_to_rgb(hsv)
-        if dark:
-            hsv = rgb_to_hsv(rgb)
-            hsv[-1] = 0.7
-            rgb = hsv_to_rgb(hsv)
-        if transparency != 1:
-            rgb = list(rgb) + [transparency]
-        cmap2.append(rgb)
-    return cmap2
-
-
-def save_fig(name, things=None, output=True):
-    """
-    save (and close) or show matplotlib picture
-    :param name: file name
-    :param things: plt.savefig(bbox_extra_artists=things)
-    :param output: show picture only
-    :return:
-    """
-    if output:
-        print_normal('save figure: {}'.format(name))
-        plt.savefig(fname='{}'.format(name), bbox_extra_artists=things, bbox_inches='tight')
-        plt.close()
-    else:
-        plt.show()
-
-
 def plot_series(
-        series, x_grid, y_names, axes_names, plot_name,
+        series, x_grid, y_names, axes_names, plot_name='',
         y_max=0, x_max=0,
         series2=None, divide=5, zero=False, custom_colormap=None,
         trimer=False, legend=True, save_to_file=False
@@ -205,7 +145,7 @@ def plot_series(
 
 
 def plot_cost(
-        pop_diff, number_of_cluster, methods, plot_name,
+        pop_diff, number_of_cluster, methods, plot_name='',
         x_max=100, print_marker=True,
         y_max=0, legend=True, save_to_file=False
 ):
@@ -215,7 +155,8 @@ def plot_cost(
     :param number_of_cluster: array of array, number of cluster of
                               given pop_diff, sorted
     :param methods: array, clustering method name for legend
-    :param plot_name: name suffix of the saved figures
+
+    :param plot_name: name prefix of the saved figures
     :param print_marker: assert to mark data
     :param x_max: set the x limit of the figures
     :param y_max: set the y limit of the figures
@@ -261,7 +202,11 @@ def plot_cost(
     save_fig(plot_name, fig_objects, output=save_to_file)
 
 
-def plot_tf(system, clx_map=None, cutoff=0.1, save_to_file=False):
+def plot_exciton_population_on_site_basis(
+        exciton_names, exciton_energies, site_names, eigenvectors,
+        clx_map=None, site_order=None, ref_exciton_names=None, ref_exciton_energies=None,
+        plot_name='', cutoff=0.1, save_to_file=False
+):
     print_normal('option -I: site-exciton corresponding plot')
 
     def pickup_str(str1, str2):
@@ -275,44 +220,47 @@ def plot_tf(system, clx_map=None, cutoff=0.1, save_to_file=False):
             r += '  '
         return r
 
-    setting = system.back_ptr.setting
-    energies, excitons = zip(*sorted(zip(system.ExcitonEnergies, system.ExcitonName)))
+    size = len(exciton_names)
+    energies, excitons = zip(*sorted(zip(exciton_energies, exciton_names)))
     excitons = list(excitons)
 
-    if len(system) > 20:
+    if size > 20:
         fig_size = [24, 14]
-    elif len(system) > 10:
+    elif size > 10:
         fig_size = [10, 8]
     else:
         fig_size = [8, 6]
-    ecl_size = fig_size[0] / len(system)
+    ecl_size = fig_size[0] / size
 
     fig = plt.figure(figsize=fig_size)
     ax = fig.gca()
     patches = []
     min_energy = energies[0]
     max_energy = energies[-1]
-    a = ecl_size * (len(system) - 1) / fig_size[0] * 0.7
+    a = ecl_size * (size - 1) / fig_size[0] * 0.7
     b = ecl_size * (max_energy - min_energy) / fig_size[1]
     x_label = []
 
-    if 'LHC2mon' in setting.InputFileName:
-        id_ls = LHCIImon_IDls
-    elif 'FMO' in setting.InputFileName:
-        id_ls = FMO_IDls
-    else:
-        id_ls = list(range(len(system)))
+    id_ls = list(range(size))
+    if site_order:
+        if not set(site_names) - set(site_order):
+            rc_order = list(site_order)
+            id_ls = [site_names.index(n) for n in rc_order]
 
     # change the sequence of basis in eigenvectors
-    v2 = system.EigenVectors ** 2
-    indexing = [system.ExcitonName.index(n) for n in excitons]
+    v2 = eigenvectors ** 2
+    indexing = [exciton_names.index(n) for n in excitons]
     tf = v2[id_ls, ][:, indexing]
 
     color_dict = dict()
     if clx_map:
+        # if not provide excitons in h0:
+        if ref_exciton_energies is None or ref_exciton_names is None:
+            ref_exciton_names, ref_exciton_energies = exciton_names, exciton_energies
+
         # sort clusters by minimum energy member:
-        ref_energies = np.array(system.get_original().ExcitonEnergies)
-        min_energies = [min((ref_energies[system.ExcitonName.index(n)] for n in cluster)) for cluster in clx_map.groups()]
+        ref_energies = np.array(ref_exciton_energies)
+        min_energies = [min((ref_energies[ref_exciton_names.index(n)] for n in cluster)) for cluster in clx_map.groups()]
         groups = [s for _, s in sorted(zip(min_energies, clx_map.groups()))]
 
         color_number = len(clx_map)
@@ -322,17 +270,17 @@ def plot_tf(system, clx_map=None, cutoff=0.1, save_to_file=False):
                 color_dict[n] = len(clx_map) - i - 1
 
     else:
-        color_number = len(system)
+        color_number = size
         # sort color by the reference system
-        for n in system.ExcitonName:
-            color_dict[n] = len(system) - system.get_original().ExcitonName.index(n) - 1
+        for n in exciton_names:
+            color_dict[n] = size - ref_exciton_names.index(n) - 1
 
     color_array = []
     cmap2 = colormap(color_number)
 
     # axis parameters
     tick_params = {}
-    x_n = np.arange(len(system))
+    x_n = np.arange(size)
     if len(x_n) > 30:
         plt.xticks(rotation=45)
         tick_params['labelsize'] = 10
@@ -340,9 +288,9 @@ def plot_tf(system, clx_map=None, cutoff=0.1, save_to_file=False):
         plt.xticks(rotation=30)
         tick_params['labelsize'] = 25
 
-    for i in range(len(system)):
-        x_label.append(system.SiteName[id_ls[i]])
-        for j in range(len(system)):
+    for i in range(size):
+        x_label.append(site_names[id_ls[i]])
+        for j in range(size):
             e = energies[j]
             if tf[i, j] > cutoff:
                 size_b, _ = get_pattern_size(tf[i, j], maxsize=b)
@@ -368,17 +316,17 @@ def plot_tf(system, clx_map=None, cutoff=0.1, save_to_file=False):
 
     # y2 title
     maxlen = max([len(s.replace(",", "")) for s in name_ls])
-    y2title = plt.text(len(system)-1 + a/2 + maxlen*a*0.045*tick_params['labelsize'],
+    y2title = plt.text(size-1 + a/2 + maxlen*a*0.045*tick_params['labelsize'],
                        (max_energy - min_energy) / 2 + min_energy,
                        'Exciton States', rotation=270,
                        va='center', ha='left')
     things.append(y2title)
 
     # y2 ticks
-    y2_x = len(system)-1+2*a/3
+    y2_x = size-1+2*a/3
     for i, state in enumerate(excitons):
         line_leng = 10
-        line_x = np.linspace(-a/2, len(system)-1+a/2, line_leng)
+        line_x = np.linspace(-a/2, size-1+a/2, line_leng)
         line_y = np.ones(line_leng) * energies[i]
         plt.plot(line_x, line_y, '--', c='#d8d8d8', zorder=0)
         color = cmap2[color_dict[state]]
@@ -390,7 +338,7 @@ def plot_tf(system, clx_map=None, cutoff=0.1, save_to_file=False):
     p.set_color(color_array)
     ax.add_collection(p)
 
-    plt.axis([-a/2, len(system)-1+a/2, min_energy-b/2, max_energy+b/2])
+    plt.axis([-a/2, size-1+a/2, min_energy-b/2, max_energy+b/2])
 
     ax.set_xticks(x_n)
     ax.set_xticklabels(x_label)
@@ -401,81 +349,12 @@ def plot_tf(system, clx_map=None, cutoff=0.1, save_to_file=False):
     plt.xlabel('Site')
     plt.ylabel('Exciton Energies (cm' + r'$^{\mathregular{-1}}$' ')')
 
-    if clx_map:
-        str1 = '{}_{}c_'.format(clx_map.method, len(clx_map))
-    else:
-        str1 = 'Full_'
-    save_fig(system.get_output_name(str1 + 'SiteExciton'), things, output=save_to_file)
-
-
-def get_p_shift(site, ps1=False):
-    # for PSI:
-    if ps1:
-        # label_shift_up = []
-        # label_shift_down = []
-        point_shift_up = 'A37', 'B13', 'EC-A3', 'A34', 'A22', 'A08', \
-                         'A03', 'B14', 'B18', 'B05', 'EC-B2', 'B09'
-        point_shift_down = 'A21', 'L02', 'A19', 'B23', 'EC-A2', 'EC-B3', \
-                           'A33', 'A12', 'A27', 'A38'
-        point_shift_up_2 = 'B37', 'A16', 'B26', 'sink'
-        point_shift_down_2 = 'B16', 'A28'
-
-    else:
-        point_shift_up, point_shift_down, \
-        point_shift_up_2, point_shift_down_2 = [], [], [], []
-
-    if site in point_shift_down:
-        p_shift = -2
-    elif site in point_shift_up:
-        p_shift = 2
-    elif site in point_shift_up_2:
-        p_shift = 5
-    elif site in point_shift_down_2:
-        p_shift = -5
-    else:
-        p_shift = 0
-    return p_shift
-
-
-def set_ax_limit(ax, site_positions, ps1=False):
-    # for PSI:
-    if ps1:
-        ax.set_xlim(41.78, 154.09)
-        ax.set_ylim(58.28, 177.87)
-    else:
-        x_min = np.min(site_positions[:, 0])
-        x_max = np.max(site_positions[:, 0])
-        y_min = np.min(site_positions[:, 1])
-        y_max = np.max(site_positions[:, 1])
-        shift = 0.2
-        x_shift = lim_diff(x_min, x_max) * shift
-        y_shift = lim_diff(y_min, y_max) * shift
-        ax.set_xlim(x_min - x_shift, x_max + x_shift)
-        ax.set_ylim(y_min - y_shift, y_max + y_shift)
-
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-
-
-def lim_diff(l, u):
-    return u-l
-
-
-def text_pos(ax, right=False, medium=False, xshift=0.02, yshift=0.02):
-    if medium:
-        y = lim_diff(*ax.get_ylim()) / 2 + ax.get_ylim()[0]
-    else:
-        y = yshift * lim_diff(*ax.get_ylim()) + ax.get_ylim()[0]
-    if right:
-        x = -xshift * lim_diff(*ax.get_xlim()) + ax.get_xlim()[1]
-    else:
-        x = xshift * lim_diff(*ax.get_xlim()) + ax.get_xlim()[0]
-
-    return x, y
+    save_fig(plot_name + 'SiteExciton', things, output=save_to_file)
 
 
 def plot_dyanmics(
-    pop_seq, time_sequence, pop_names, plot_name='', pop_seq2=None,
+    pop_seq, time_sequence, pop_names,
+    plot_name='', pop_seq2=None,
     y_max=0, x_max=0, legend=True,
     divide=100, save_to_file=False
 ):
@@ -612,3 +491,117 @@ def plot_exst(system, cutoff=0.1, clx_map=None, allsite=False, save_to_file=Fals
                  'cutoff = {:.2f}'.format(cutoff), size=12, ha='right')
 
         save_fig(system.get_output_name(plot_name + 'Excitons_{}'.format(exst_name)), output=save_to_file)
+
+
+# ============================================================
+
+
+def node_color_energy(nodes, energies):
+    energy_list = sorted(zip(energies, nodes))
+
+    cmap2 = colormap(len(nodes), bright=True)
+    cmap2.reverse()
+
+    return {energy_list[i][1]: rgb2hex(cmap2[i]) for i in range(len(nodes))}
+
+
+def colormap(color_number=256, shift=0, bright=False, dark=False, transparency=1, color_map='rainbow'):
+    cmap2 = []
+    cmap = plt.cm.get_cmap(color_map, color_number + shift * 2)
+    for i in range(color_number):
+        rgb = cmap(shift + i)[:3]  # first 3 : rgb
+        if bright:
+            hsv = rgb_to_hsv(rgb)
+            hsv[-1] = 1
+            hsv[-2] *= .6
+            rgb = hsv_to_rgb(hsv)
+        if dark:
+            hsv = rgb_to_hsv(rgb)
+            hsv[-1] = 0.7
+            rgb = hsv_to_rgb(hsv)
+        if transparency != 1:
+            rgb = list(rgb) + [transparency]
+        cmap2.append(rgb)
+    return cmap2
+
+
+def save_fig(name, things=None, output=True):
+    """
+    save (and close) or show matplotlib picture
+    :param name: file name
+    :param things: plt.savefig(bbox_extra_artists=things)
+    :param output: show picture only
+    :return:
+    """
+    if output:
+        print_normal('save figure: {}'.format(name))
+        plt.savefig(fname='{}'.format(name), bbox_extra_artists=things, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+
+
+def get_p_shift(site, ps1=False):
+    # for PSI:
+    if ps1:
+        # label_shift_up = []
+        # label_shift_down = []
+        point_shift_up = 'A37', 'B13', 'EC-A3', 'A34', 'A22', 'A08', \
+                         'A03', 'B14', 'B18', 'B05', 'EC-B2', 'B09'
+        point_shift_down = 'A21', 'L02', 'A19', 'B23', 'EC-A2', 'EC-B3', \
+                           'A33', 'A12', 'A27', 'A38'
+        point_shift_up_2 = 'B37', 'A16', 'B26', 'sink'
+        point_shift_down_2 = 'B16', 'A28'
+
+    else:
+        point_shift_up, point_shift_down, \
+        point_shift_up_2, point_shift_down_2 = [], [], [], []
+
+    if site in point_shift_down:
+        p_shift = -2
+    elif site in point_shift_up:
+        p_shift = 2
+    elif site in point_shift_up_2:
+        p_shift = 5
+    elif site in point_shift_down_2:
+        p_shift = -5
+    else:
+        p_shift = 0
+    return p_shift
+
+
+def set_ax_limit(ax, site_positions, ps1=False):
+    # for PSI:
+    if ps1:
+        ax.set_xlim(41.78, 154.09)
+        ax.set_ylim(58.28, 177.87)
+    else:
+        x_min = np.min(site_positions[:, 0])
+        x_max = np.max(site_positions[:, 0])
+        y_min = np.min(site_positions[:, 1])
+        y_max = np.max(site_positions[:, 1])
+        shift = 0.2
+        x_shift = lim_diff(x_min, x_max) * shift
+        y_shift = lim_diff(y_min, y_max) * shift
+        ax.set_xlim(x_min - x_shift, x_max + x_shift)
+        ax.set_ylim(y_min - y_shift, y_max + y_shift)
+
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+
+def lim_diff(l, u):
+    return u-l
+
+
+def text_pos(ax, right=False, medium=False, xshift=0.02, yshift=0.02):
+    if medium:
+        y = lim_diff(*ax.get_ylim()) / 2 + ax.get_ylim()[0]
+    else:
+        y = yshift * lim_diff(*ax.get_ylim()) + ax.get_ylim()[0]
+    if right:
+        x = -xshift * lim_diff(*ax.get_xlim()) + ax.get_xlim()[1]
+    else:
+        x = xshift * lim_diff(*ax.get_xlim()) + ax.get_xlim()[0]
+
+    return x, y

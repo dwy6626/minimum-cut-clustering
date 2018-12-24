@@ -9,6 +9,8 @@ import plot
 
 
 class Project:
+    # TODO: selector from: clustering method, n_c
+    # TODO: maybe need to modify the data structure
     def __init__(self, setting, config=None):
         self.col = ['Method', 'N', 'CGM', 'OverlapFactor', 'PopDiff']
 
@@ -167,14 +169,14 @@ class Project:
     def save(self):
         if len(self.disorders) > 1:
             shift_file = self.get_output_name('_disorder.csv')
-            print_normal('save disorder values:', shift_file)
+            print_normal('save disorder values: {}'.format(shift_file))
             np.savetxt(shift_file,
                        reduce(lambda x, y: np.append(x, y, axis=0), self.disorders),
                        delimiter=",", fmt='%.8f')
 
         if self.discard_disorders:
             shift_file = self.get_output_name('_discard_disorder.csv')
-            print_normal('save discard disorder values:', shift_file)
+            print_normal('save discard disorder values: {}'.format(shift_file))
             np.savetxt(shift_file,
                        reduce(lambda x, y: np.append(x, y, axis=0), self.discard_disorders),
                        delimiter=",", fmt='%.8f')
