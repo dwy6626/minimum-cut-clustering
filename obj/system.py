@@ -797,7 +797,7 @@ class System:
             raise Warning
 
         df = self.back_ptr.data_frame[self.get_index()]
-        methods = sorted(set(df['Method']), key=method_to_number)
+        methods = sorted(set(df['Method']), key=method_sort_key)
         return_object = [[], [], methods]
         for m in methods:
             cost = []

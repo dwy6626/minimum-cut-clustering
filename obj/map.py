@@ -246,20 +246,30 @@ class ClusterMap:
         return new_map
 
     def save(self):
+        """
+        after clustering, print the cluster result and save back to the project
+        """
         self.print_all()
         proj = self.back_ptr.back_ptr
 
         # add a coarse-grained model
-        m = self.method
         h = self.back_ptr.get_index()
-        n = len(self)
-        mp = self.copy()
-        c = None
-        olfac = proj.overlap_factors[h]
-
-        sr = pd.Series((m, n, mp, olfac, c), index=proj.col)
 
         if len(proj.data_frame) <= h:
             proj.data_frame.append(pd.DataFrame(columns=proj.col, dtype=object))
 
-        proj.data_frame[h].loc[len(proj.data_frame[h])] = sr
+        df = proj.data_frame[h]
+
+        # run an self check to prevent adding redundant table element
+        for i, (m, n, _, _, _) in df.iterrows():
+            if m == self.method and n == len(self):
+                return
+
+        m = self.method
+        n = len(self)
+        mp = self.copy()
+        c = None
+        olfac = proj.overlap_factors[h]
+        sr = pd.Series((m, n, mp, olfac, c), index=proj.col)
+
+        df.loc[len(proj.data_frame[h])] = sr

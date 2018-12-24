@@ -30,6 +30,8 @@ class Config:
             'legend.fontsize': 25,
             'axes.labelsize': 30,
             'axes.titlesize': 30,
+            "ytick.labelsize": 20,
+            "xtick.labelsize": 20,
             'figure.figsize': (9, 6),
             'legend.frameon': False,
             'lines.markeredgewidth': 3

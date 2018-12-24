@@ -190,7 +190,7 @@ def paper_method(this_method, option=1):
     :param option:
         0: unmodified
         1: BUC -> minimum cut
-        2: BUC -> bottom-up clustering
+        2: BUC -> bottom-up
         3: TDC -> AC (old)
     :return: renamed method (str)
     """
@@ -199,23 +199,33 @@ def paper_method(this_method, option=1):
         return c_method.replace('TDC', 'AC')
 
     elif option in (1, 2):
-        if this_method == 'BUC':
-
-            if option == 1:
-                return 'minimum cut'
-            else:
-                return 'bottom-up clustering'
-        elif this_method == 'KM':
-            return 'k-means'
-        elif this_method == 'DC':
-            return 'cut-off'  # rate constant cut-off
-        elif this_method == 'TDC':
-            return 'top-down clustering'
+        suffix = ''
+        if 'DC' == this_method[:2] and len(this_method) > 2:
+            suffix = {
+                'max': ' (larger rate)',
+                'geo': ' (geo mean)',
+                'rms': ' (rms rate)'
+            }[this_method[2:]]
+            this_method = 'DC'
+        if '_uN' in this_method:
+            suffix = ' (not normalized)'
+            this_method = this_method.replace('_uN', '')
+        replace_dict = {
+            'BUC': 'minimum cut',
+            'KM': 'k-means',
+            'DC': 'cut-off',
+            'TDC': 'top-down',
+            'SC': 'simple cut',
+            'SR': 'simple ratio cut'
+        }
+        if option == 2:
+            replace_dict['BUC'] = 'bottom-up'
+        this_method = replace_dict.get(this_method, this_method) + suffix
 
     return this_method
 
 
-def method_to_number(method):
+def method_sort_key(method):
     # main methods
     m_ls = ['BUC', 'TDC', 'SR', 'SC', 'DC', 'KM']
     v_ls = [0, 1, 11, 12, 20, 25]
@@ -228,7 +238,7 @@ def method_to_number(method):
         r = 100
 
     # flow normalization
-    if 'uN' in method:
+    if '_uN' in method:
         r += 0.4
         method.replace('_uN', '')
 
