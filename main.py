@@ -1,4 +1,8 @@
 # the main script of the program
+# TODO: add header description to all .py files
+# TODO: add __doc__ to all public functions
+# TODO: rewrite the 1000 disorder flow analysis on 3-cluster model
+# TODO:
 
 
 # ============================================================
@@ -27,6 +31,7 @@ if not input_fname:
     print('Warning: please specify the input file position\n')
     lib.help_message()
 
+# TODO: load saved project
 Project.build_reference_system(
     input_fname,
     is_rate_matrix=input_fname.split('.')[-1].lower() != 'h',

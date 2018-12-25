@@ -27,6 +27,7 @@ Markers = [
 # ============================================================
 
 
+# TODO: for LHCII trimer, the old program accepted kw 'trimer' to sort excitons in each monomers
 def plot_series(
         series, x_grid, y_names, axes_names, plot_name='',
         y_max=0, x_max=0,

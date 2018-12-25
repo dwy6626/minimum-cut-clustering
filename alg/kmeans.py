@@ -8,6 +8,8 @@ KM_inf = 10 ** 5
 # ============================================================
 
 
+# TODO: how to go faster? this algorithm actually search for local minimum only
+# TODO: I have wrote an GA-assisted algorithm in the old version, should I implement here?
 def k_means_like(system, power=2):
     def km_init(_n_c, job_name):
         # check the initial state:

@@ -221,3 +221,25 @@ class Project:
                 legend='nolegend' not in self.setting,
                 save_to_file=save_to_file
             )
+
+    def get_cluster_map(self, method, number_of_cluster, h_id=0):
+        """
+        get the clustered results
+        :param method: str, clustering method,
+                       use set(self.data_frame[h_id]['Method']) to see methods list
+        :param number_of_cluster: int, select the ?-cluster model
+        :param h_id: int, index of Hamiltonian (default = 0, un-disordered one)
+        :return: ClusterMap object
+        """
+        if h_id >= len(self.data_frame):
+            raise KeyError("clustered results of Hamiltonian {} not exist".format(h_id))
+        df = self.data_frame[h_id]
+
+        if method not in set(df['Method']):
+            raise KeyError("clustered results of method {} not exist".format(method))
+
+        df = df.loc[df['Method'] == method]
+        if number_of_cluster not in df['N'].values:
+            raise KeyError("{}-cluster model of method {} not exist".format(number_of_cluster, method))
+
+        return df.loc[df['N'] == number_of_cluster]['CGM'].values[0]
