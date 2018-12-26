@@ -73,17 +73,17 @@ class System:
         sd = pass_float(self.back_ptr.setting.get('sd', 100))
         while True:
             if len(self.back_ptr.disorders) > self.__index:
-                disorders = self.back_ptr.disorders[self.__index].reshape(-1, 1)
+                disorders = self.back_ptr.disorders[self.__index].reshape(len(self))
+                print_normal('static disorder (cm-1):')
+                print_normal(disorders)
             else:
                 disorders = np.random.normal(scale=sd, size=len(self))
+                print('static disorder (cm-1):')
+                print(disorders)
 
-            print(disorders)
             hamiltonian = copy(reference.Hamiltonian)
             for j in range(len(self)):
                 hamiltonian[j, j] = hamiltonian[j, j] + disorders[j]
-
-            print('static disorder (cm-1):')
-            print(disorders)
 
             # find corresponding node names: maximum overlap
             w, eigv = np.linalg.eigh(hamiltonian)
