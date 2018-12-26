@@ -576,10 +576,10 @@ class System:
             pop = np.zeros(len(self))
             if init_option.lower() in ['sink', 'target', 't']:
                 # sink: the exciton state with lowest energy
-                pop[-1] = 1
+                pop[0] = 1
             elif init_option.lower() in ['s', 'source']:
                 # source: the exciton state with highest energy
-                pop[0] = 1
+                pop[-1] = 1
             elif init_option in nodes:
                 pop[nodes.index(init_option)] = 1
             elif all([x in nodes for x in re.split(r'[,-]', init_option)]):
