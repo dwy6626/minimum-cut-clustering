@@ -227,8 +227,6 @@ def flow_analysis(system, cluster=None):
     :param draw: assert to draw flow graph (default = False)
     :return: flow matrix, flow graph with flow in attr: ['ffa']
     """
-    # TODO: get_cluster_rate_and_energies() redundant in main.py
-    # TODO: maybe: 1. pass the graph back?  2. another function to draw flow
     setting = system.back_ptr.setting
     node_ls = system.ExcitonName
 

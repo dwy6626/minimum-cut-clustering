@@ -9,8 +9,6 @@ import plot
 
 
 class Project:
-    # TODO: selector from: clustering method, n_c
-    # TODO: maybe need to modify the data structure
     def __init__(self, setting, config=None):
         self.col = ['Method', 'N', 'CGM', 'OverlapFactor', 'PopDiff']
 
