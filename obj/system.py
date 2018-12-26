@@ -73,10 +73,11 @@ class System:
         sd = pass_float(self.back_ptr.setting.get('sd', 100))
         while True:
             if len(self.back_ptr.disorders) > self.__index:
-                disorders = self.back_ptr.disorders[self.__index]
+                disorders = self.back_ptr.disorders[self.__index].reshape(-1, 1)
             else:
-                disorders = np.array([np.random.normal(scale=sd) for _ in range(len(self))])
+                disorders = np.random.normal(scale=sd, size=len(self))
 
+            print(disorders)
             hamiltonian = copy(reference.Hamiltonian)
             for j in range(len(self)):
                 hamiltonian[j, j] = hamiltonian[j, j] + disorders[j]
