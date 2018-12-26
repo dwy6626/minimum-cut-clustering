@@ -366,10 +366,10 @@ class System:
             n_c = '{}_{}c'.format(cgm.method, len(cgm))
         return self.back_ptr.get_output_name('{}_{}_'.format(H_suffix(self.get_index()), n_c))
 
-    def get_cluster(self, clx_map):
+    def get_cluster_rate_and_energies(self, cluster_map):
         """
         build the coarse-grained model
-        :param clx_map: cluster_map
+        :param cluster_map: ClusterMap object
         :return: rate matrix, energies (2-tuple)
         """
         rate = self.RateConstantMatrix.values
@@ -380,15 +380,15 @@ class System:
         else:
             ref_energies = np.array(self.get_original().ExcitonEnergies)
 
-        groups = clx_map.groups()
+        groups = cluster_map.groups()
 
         # sort clusters by minimum energy member:
         min_energies = [min((ref_energies[self.ExcitonName.index(n)] for n in cluster)) for cluster in groups]
         groups = [s for _, s in sorted(zip(min_energies, groups))]
 
         cluster_names = tuple(map(lambda x: ' '.join(sorted(x)), groups))
-        cluster_energies = np.zeros(len(clx_map))
-        weighted_rates = np.zeros(len(clx_map))
+        cluster_energies = np.zeros(len(cluster_map))
+        weighted_rates = np.zeros(len(cluster_map))
 
         temperature = self.back_ptr.setting.get_temperature()
         boltz_weights = get_boltz_factor(np.array(self.ExcitonEnergies), temperature)
@@ -473,7 +473,7 @@ class System:
             plot_name = self.get_output_name('Full_')
         else:
             if isinstance(cluster, ClusterMap):
-                rate, cluster_energies = self.get_cluster(cluster)
+                rate, cluster_energies = self.get_cluster_rate_and_energies(cluster)
                 plot_name = self.get_plot_name(cluster)
             elif len(cluster) == 3:
                 rate, cluster_energies, plot_name = cluster
@@ -490,6 +490,7 @@ class System:
     def plot_dynamics(
             self, cluster=None, save_to_file=False, max_name_len=30
     ):
+        # TODO: not use setting?
         _, cluster_energies, plot_name = self.__cluster_handler(cluster)
         is_clustered = cluster_energies is not None
 
@@ -506,14 +507,6 @@ class System:
 
             # for label is too long: cluster X
             pop_names = wraps(clusters, maxlen=max_name_len)
-
-            plot.plot_dyanmics(
-                pop_seq, time_sequence, pop_names, plot_name,
-                pop_seq2=self.get_comparison_to_full_dynamics(clusters),
-                y_max=y_max, x_max=x_max, divide=divide,
-                legend='nolegend' not in setting,
-                save_to_file=save_to_file
-            )
         else:
             if self.__pop_tuple is None:
                 self.__cal_dynamics()
@@ -758,7 +751,7 @@ class System:
         :return: population difference
         """
         if isinstance(cluster, ClusterMap):
-            cluster = self.get_cluster(cluster)
+            cluster = self.get_cluster_rate_and_energies(cluster)
 
         if self.__pop_tuple is None:
             print_normal('\ncalculate the full dynamics for comparison')
@@ -846,7 +839,7 @@ class System:
         """
         plot.plot_exciton_population_on_site_basis(
             self.ExcitonName, self.ExcitonEnergies, self.SiteName, self.EigenVectors,
-            site_order=site_order, clx_map=cluster_map,
+            site_order=site_order, cluster_map=cluster_map,
             ref_exciton_names=self.get_original().ExcitonName,
             ref_exciton_energies=self.get_original().ExcitonEnergies,
             plot_name=self.get_plot_name(cluster_map),

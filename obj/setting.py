@@ -242,3 +242,9 @@ class Setting:
 
     def __contains__(self, k):
         return self.__keywords.__contains__(k)
+
+    def add_keyword(self, k):
+        if isinstance(k, str):
+            self.__keywords.add(k)
+        else:
+            raise KeyError("keyword should be a string")

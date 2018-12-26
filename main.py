@@ -2,8 +2,8 @@
 # TODO: add header description to all .py files
 # TODO: add __doc__ to all public functions
 # TODO: rewrite the 1000 disorder flow analysis on 3-cluster model
-# TODO:
-
+# TODO: BUG FIX: modify 'init' setting will not change the saved dynamics!
+#       use pop[t = 0] ? or record old setting?
 
 # ============================================================
 # SYSTEM CHECK
@@ -101,7 +101,10 @@ for h_id, system in enumerate(Project):
 
     # option -F: FFA flow decomposition
     if judge_set.intersection(opt_set['F']):
-        alg.flow_analysis(system, draw=True)
+        flow_matrix, flow_network = alg.flow_analysis(system)
+        lib.nx_aux.nx_graph_draw(flow_network, Project.config.get_graphviz_dot_path(), Setting,
+                                 system.get_plot_name() + 'FFA', label=alg.FFA_FlowName,
+                                 rc_order=system.ExcitonName)
         lib.print_1_line_stars()
 
     # option -r: save rate matrix
@@ -236,11 +239,11 @@ if len(Project.data_frame) > 0:
                 lib.print_1_line_stars()
 
             if exciton_plot:
-                plot.plot_exst(system, allsite='allsite' in Setting, clx_map=cgm)
+                plot.plot_exst(system, allsite='allsite' in Setting, cluster_map=cgm)
 
             if any([dot, ffa, dynamics, flux, rate]):
                 # tuple: rate matrix, energies, name
-                cluster_3_tuple = *system.get_cluster(cgm), system.get_plot_name(cgm)
+                cluster_3_tuple = *system.get_cluster_rate_and_energies(cgm), system.get_plot_name(cgm)
 
                 # graphviz / dot files
                 if dot:
@@ -251,7 +254,11 @@ if len(Project.data_frame) > 0:
                     lib.print_1_line_stars()
 
                 if ffa:
-                    alg.flow_analysis(system, cluster_3_tuple)
+                    flow_matrix, flow_network = alg.flow_analysis(system, cluster_3_tuple)
+                    lib.nx_aux.nx_graph_draw(flow_network, Project.config.get_graphviz_dot_path(), Setting,
+                                             cluster_3_tuple[2] + 'FFA', label=alg.FFA_FlowName,
+                                             rc_order=list(cluster_3_tuple[0].keys()))
+
                     lib.print_1_line_stars()
 
                 if rate:

@@ -209,6 +209,7 @@ def get_integrated_flux(
 
 
 def plot_integrate_flux(integrated_flux_matrix, nodes, energies, plot_name, setting=None, dot_path=''):
+    # TODO: replace 'setting'
     graph = nx.DiGraph()
     size = len(nodes)
     graph.add_nodes_from(

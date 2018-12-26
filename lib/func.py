@@ -262,7 +262,7 @@ def get_cluster_graph(cluster):
     # tuple: rate matrix, energies
     from obj.map import ClusterMap
     if isinstance(cluster, ClusterMap):
-        cluster = cluster.back_ptr.get_cluster(cluster)
+        cluster = cluster.back_ptr.get_cluster_rate_and_energies(cluster)
     graph = nx.DiGraph()
     graph.add_nodes_from(
         ((cluster[0].keys()[i], {'energy': cluster[1][i]}) for i in range(len(cluster[0].keys())))

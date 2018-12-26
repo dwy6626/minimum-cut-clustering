@@ -2,11 +2,13 @@ from . import nx_pydot
 from .. import module_log
 
 
+# TODO: default rc_order vs no order?
+# TODO: unpack setting to function parameters
 def nx_graph_draw(ref_graph, dot_path='', setting=None, plot_name='', label='weight', e_name='energy', rc_order=None):
     # prevent circular import
     from lib import pass_int, pass_float, nx, wraps, os
     from plot import colormap
-    from alg import flow_kmeans, FFAName
+    from alg import flow_kmeans, FFA_FlowName
     from matplotlib.colors import rgb2hex
 
     if not setting:
@@ -37,7 +39,7 @@ def nx_graph_draw(ref_graph, dot_path='', setting=None, plot_name='', label='wei
         graph.nodes[n]['color'] = rgb2hex(c)
 
     # wrap edges
-    max_flow_ratio = FFAName == label
+    max_flow_ratio = FFA_FlowName == label
     decimal = pass_int(setting['decimal'])
     cutoff = pass_float(setting['cutoff'])
 
@@ -81,7 +83,8 @@ def nx_graph_draw(ref_graph, dot_path='', setting=None, plot_name='', label='wei
         else:
             graph.nodes[n]['fontsize'] = 24
     graph = nx.relabel_nodes(graph, mapping, copy=False)
-    rc_order = [mapping[n] for n in rc_order]
+    if rc_order is not None:
+        rc_order = [mapping[n] for n in rc_order]
 
     # next step: width of flow:
     if labels:

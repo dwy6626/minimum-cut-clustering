@@ -205,7 +205,7 @@ def plot_cost(
 
 def plot_exciton_population_on_site_basis(
         exciton_names, exciton_energies, site_names, eigenvectors,
-        clx_map=None, site_order=None, ref_exciton_names=None, ref_exciton_energies=None,
+        cluster_map=None, site_order=None, ref_exciton_names=None, ref_exciton_energies=None,
         plot_name='', cutoff=0.1, save_to_file=False
 ):
     print_normal('option -I: site-exciton corresponding plot')
@@ -254,21 +254,21 @@ def plot_exciton_population_on_site_basis(
     tf = v2[id_ls, ][:, indexing]
 
     color_dict = dict()
-    if clx_map:
+    if cluster_map:
         # if not provide excitons in h0:
         if ref_exciton_energies is None or ref_exciton_names is None:
             ref_exciton_names, ref_exciton_energies = exciton_names, exciton_energies
 
         # sort clusters by minimum energy member:
         ref_energies = np.array(ref_exciton_energies)
-        min_energies = [min((ref_energies[ref_exciton_names.index(n)] for n in cluster)) for cluster in clx_map.groups()]
-        groups = [s for _, s in sorted(zip(min_energies, clx_map.groups()))]
+        min_energies = [min((ref_energies[ref_exciton_names.index(n)] for n in cluster)) for cluster in cluster_map.groups()]
+        groups = [s for _, s in sorted(zip(min_energies, cluster_map.groups()))]
 
-        color_number = len(clx_map)
+        color_number = len(cluster_map)
         # for the color code
         for i, c in enumerate(groups):
             for n in c:
-                color_dict[n] = len(clx_map) - i - 1
+                color_dict[n] = len(cluster_map) - i - 1
 
     else:
         color_number = size
@@ -429,7 +429,7 @@ def population_animatation(
     animation.save(name, writer=writer, dpi=dpi)
 
 
-def plot_exst(system, cutoff=0.1, clx_map=None, allsite=False, save_to_file=False):
+def plot_exst(system, cutoff=0.1, cluster_map=None, allsite=False, save_to_file=False):
     """
     plot the positions of excitons
     real space projection to 2D
@@ -444,11 +444,11 @@ def plot_exst(system, cutoff=0.1, clx_map=None, allsite=False, save_to_file=Fals
 
     text_param = {'ha': 'center', 'size': 12}
 
-    if clx_map:
-        plot_name = '{}_{}c_'.format(clx_map.method, len(clx_map))
+    if cluster_map:
+        plot_name = '{}_{}c_'.format(cluster_map.method, len(cluster_map))
         ref_energies = np.array(system.get_original().ExcitonEnergies)
-        min_energies = [min((ref_energies[system.ExcitonName.index(n)] for n in cluster)) for cluster in clx_map.groups()]
-        iter_states = [s for _, s in sorted(zip(min_energies, clx_map.groups()))]
+        min_energies = [min((ref_energies[system.ExcitonName.index(n)] for n in cluster)) for cluster in cluster_map.groups()]
+        iter_states = [s for _, s in sorted(zip(min_energies, cluster_map.groups()))]
     else:
         plot_name = 'Full_'
         iter_states = [[s] for s in system.ExcitonName]
