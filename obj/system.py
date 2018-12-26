@@ -837,9 +837,20 @@ class System:
                  corresponding full population dynamics
         """
         # check if full network dynamics is calculated
+        re_calculated = False
         if self.__pop_tuple is None:
             print_normal('\ncalculate the full dynamics for comparison')
             self.__cal_dynamics()
+            re_calculated = True
+
+        setting = self.back_ptr.setting
+        _, time, time_grid = self.__pop_tuple
+
+        if not re_calculated and (time != pass_int(setting['time']) or time_grid != pass_int(setting['grid'])):
+            print_normal('the propagation setting is changed')
+            print_normal('re-calculate the full dynamics')
+            self.__cal_dynamics()
+            re_calculated = True
 
         def _aux(_clusters):
             _pop_seq, _, _time_grid = self.__pop_tuple
@@ -854,7 +865,7 @@ class System:
 
         pop_full = _aux(clusters)
 
-        if check_init is not None and not np.allclose(check_init[:, 0], pop_full[:, 0]):
+        if not re_calculated and check_init is not None and not np.allclose(check_init[:, 0], pop_full[:, 0]):
             print_normal('the initail population is changed')
             print_normal('re-calculate the full dynamics')
             self.__cal_dynamics()
