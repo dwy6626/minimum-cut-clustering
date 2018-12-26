@@ -224,9 +224,9 @@ def flow_analysis(system, cluster=None):
     :param cluster: should be
                     1. tuple: rate matrix, cluster energies, (plot name)
                     2. ClusterMap object
-    :param draw: assert to draw flow graph (default = False)
     :return: flow matrix, flow graph with flow in attr: ['ffa']
     """
+    # TODO: modify the selecting method
     setting = system.back_ptr.setting
     node_ls = system.ExcitonName
 
