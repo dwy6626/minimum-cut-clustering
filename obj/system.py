@@ -503,7 +503,7 @@ class System:
 
         if is_clustered:
             pop_seq, time_sequence, clusters = self.__cal_dynamics(cluster=cluster)
-            pop_seq2 = self.get_comparison_to_full_dynamics(clusters)
+            pop_seq2 = self.get_comparison_to_full_dynamics(clusters, check_init=pop_seq)
 
             # for label is too long: cluster X
             pop_names = wraps(clusters, maxlen=max_name_len)
@@ -535,22 +535,37 @@ class System:
                 save_to_file=save_to_file
             )
 
-    def get_initial_populations(self, nodes, energies, clusters=None, cluster_energies=None):
-        if clusters is not None and cluster_energies is not None:
+    def get_initial_populations(self, nodes, energies=None, clusters=None, init_option='init'):
+        """
+        return the initial population for population dynamics calculation
+
+        :param nodes: list of string, name of the excitons
+
+        :param energies: list of float, corresponding energies of nodes, for init_option='boltzmann'
+        :param clusters: list of string, cluster names
+        :param init_option: string,
+            equally (default): equally populated
+            source: populate the highest state
+            sink: populate the lowest state
+            boltz: populate the states by thermal dist.
+            (Exciton Name): populate the specified exciton(s)
+                e.g. '1' => exciton named '1'
+                     '3,4,6' => equally populate excitons '3', '4' and '6'
+
+        :return: initial population: n * 1 numpy matrix
+        """
+        if clusters is not None:
             size = len(clusters)
             is_clustered = True
         else:
             is_clustered = False
             size = len(self)
 
-        setting = self.back_ptr.setting
-
         # equal partitions
-        init_option = setting['init']
         if init_option.lower() in ['equally', 'eq', 'equipartition', 'same']:
             pop = np.ones(len(self)) / len(self)
         # boltzmann partitions:
-        elif init_option.lower() in ['boltz', 'boltzmann', 'thermal']:
+        elif init_option.lower() in ['boltz', 'boltzmann', 'thermal'] and energies is not None:
             # calculate the exp
             temperature = self.back_ptr.setting.get_temperature()
             # use disordered energies
@@ -643,7 +658,7 @@ class System:
             '  grids on time: {}\n'.format(propagate_time, time_grid)
         )
 
-        pop = self.get_initial_populations(nodes, energies, clusters, cluster_energies)
+        pop = self.get_initial_populations(nodes, energies, clusters, init_option=self.back_ptr.setting['init'])
 
         # propagation
         if get_module_logger_level() < 20:
@@ -764,7 +779,7 @@ class System:
             _, propagate_time, time_grid = self.__pop_tuple
             time_sequence = np.linspace(0, propagate_time, time_grid)
 
-        pop_full = self.get_comparison_to_full_dynamics(cluster[0].keys())
+        pop_full = self.get_comparison_to_full_dynamics(cluster[0].keys(), check_init=pop_cluster)
 
         if spline_size:
             pop_full, _ = spline_grid(pop_full, time_sequence, spline_size)
@@ -812,21 +827,40 @@ class System:
             return_object[1] += [number_of_cluster]
         return return_object
 
-    def get_comparison_to_full_dynamics(self, clusters):
-        # for population comparison (dash line in dynamics plots of cluster)
-
+    def get_comparison_to_full_dynamics(self, clusters, check_init=None):
+        """
+        for population comparison (dash line in dynamics plots of cluster)
+        :param clusters: list of string, cluster names
+        :param check_init: (number of clusters) * (time grids) numpy matrix
+                           if given, will check whether the initial population matches the new setting
+        :return: (number of clusters) * (time grids) numpy matrix,
+                 corresponding full population dynamics
+        """
         # check if full network dynamics is calculated
         if self.__pop_tuple is None:
             print_normal('\ncalculate the full dynamics for comparison')
             self.__cal_dynamics()
 
-        pop_seq, _, time_grid = self.__pop_tuple
-        pop_full = np.zeros((len(clusters), time_grid))
+        def _aux(_clusters):
+            _pop_seq, _, _time_grid = self.__pop_tuple
+            _pop_full = np.zeros((len(_clusters), _time_grid))
 
-        for i, n in enumerate(self.ExcitonName):
-            for v, g in enumerate(clusters):
-                if n in g.split():
-                    pop_full[v] += pop_seq[i]
+            for i, n in enumerate(self.ExcitonName):
+                for v, g in enumerate(_clusters):
+                    if n in g.split():
+                        _pop_full[v] += _pop_seq[i]
+
+            return _pop_full
+
+        pop_full = _aux(clusters)
+
+        if check_init is not None and not np.allclose(check_init[:, 0], pop_full[:, 0]):
+            print_normal('the initail population is changed')
+            print_normal('re-calculate the full dynamics')
+            self.__cal_dynamics()
+
+            pop_full = _aux(clusters)
+
         return pop_full
 
     def plot_exciton_population_on_site_basis(self, cluster_map=None, site_order=None, save_to_file=False):

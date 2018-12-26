@@ -2,8 +2,6 @@
 # TODO: add header description to all .py files
 # TODO: add __doc__ to all public functions
 # TODO: rewrite the 1000 disorder flow analysis on 3-cluster model
-# TODO: BUG FIX: modify 'init' setting will not change the saved dynamics!
-#       use pop[t = 0] ? or record old setting?
 
 # ============================================================
 # SYSTEM CHECK
