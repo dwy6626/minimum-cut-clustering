@@ -1,13 +1,23 @@
-from aux import *
+from lib import *
 
 
 # ============================================================
 
 
-def input_map_clustering(system):
-    # format: 1,2|3,4|5,6|7
+def input_map_clustering(system, map_str):
+    """
+    Manual clustering, following the input string
+
+    Cluster results are save to system.back_ptr (Project object)
+
+    :param system: system to cluster
+    :param map_str: str, node names separated by ',',
+                         clusters separated by '|'
+           e.g.
+               1,2|3,4|5,6|7
+    """
     cluster_map = system.get_new_map('inp')
-    map_ls = system.back_ptr.setting.Setting['map'].split('|')
+    map_ls = map_str.split('|')
 
     clx_ls = []
     for clx in map_ls:
@@ -35,6 +45,7 @@ def input_map_clustering(system):
 def k_clustering(system):
     """
     k-clustering with Kruskal's algorithm
+    :param system: system to cluster
     """
     cluster_map = system.get_new_map('k-clustering', one_group=False)
     k = 3
@@ -50,7 +61,25 @@ def k_clustering(system):
                 break
 
 
-def cut_off_method(system, option, pass_map=False):
+def cut_off_method(system, option=4, pass_map=False):
+    """
+    Cut-off clustering method, based on the rate matrix
+    (or electronic coupling if option is 5)
+
+    Cluster results are save to system.back_ptr (Project object)
+    if pass_map is deassert
+
+    :param system: system to cluster
+    :param option:
+        1: larger rate
+        2: geometric mean
+        3. root mean square
+        4. by energy
+        5. electronic couplings in Hamiltonian
+    :param pass_map: assert to return the ClusterMap object
+                     rather than save to the project object
+    :return: ClusterMap object (only if pass_map is asserted)
+    """
     return_object = {}
 
     edge_list = system.to_undirected(option)

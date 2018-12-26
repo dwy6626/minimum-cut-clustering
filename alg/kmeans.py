@@ -1,4 +1,4 @@
-from aux import *
+from lib import *
 from . import clx
 
 
@@ -8,6 +8,8 @@ KM_inf = 10 ** 5
 # ============================================================
 
 
+# TODO: how to go faster? this algorithm actually search for local minimum only
+# TODO: I have wrote an GA-assisted algorithm in the old version, should I implement here?
 def k_means_like(system, power=2):
     def km_init(_n_c, job_name):
         # check the initial state:
@@ -23,7 +25,7 @@ def k_means_like(system, power=2):
 
         _cluster_map = ref_maps[_n_c + _shift * _sign].copy()
         if _shift != 0:
-            system.back_ptr.print_log("random generate map from:", _cluster_map)
+            print_more("random generate map from: {}".format(_cluster_map))
 
         while _shift > 0:
             _cluster_map.adjust_total_number(-_sign)
@@ -32,19 +34,8 @@ def k_means_like(system, power=2):
         _cluster_map.method = job_name
         _cluster_map.update_info(None)
 
-        if 'log' in system.back_ptr.setting.KeyWords:
-            print('initial: ', end='')
-            print(_cluster_map)
+        print_more('initial: {}'.format(_cluster_map))
         return _cluster_map
-
-    def var_cal_gakm(_map):
-        r = 0
-        for g in _map.groups():
-            sub_sum = 0
-            for _m, _n in combinations(g, 2):
-                sub_sum += aux_matrix[_m][_n]
-            r += sub_sum / len(g) ** 2 / 2
-        return r
 
     def var_cal(_map):
         r = 0
@@ -57,30 +48,13 @@ def k_means_like(system, power=2):
                 return float('inf')
         return r
 
-    def _new_random_map(_nc, job_name):
-        node_ls = system.ExcitonName
-        # generate a array of graph size
-        # with random numbers 0 to _nc-1
-        while 1:
-            seeds = np.ceil(np.random.rand(len(system)) * _nc).astype('int') - 1
-            if len(np.unique(seeds)) == _nc:
-                break
-
-        _cluster_map = system.get_new_map(job_name, one_group=False)
-        for j in range(_nc):
-            group = []
-            for k in np.where(seeds == j)[0]:
-                group.append(node_ls[k])
-            _cluster_map.group_up(group)
-        return _cluster_map
-
     # a new KM-like function:
     def __clx(_nc, epsilon=0):
         job_name = 'KM'
         cluster_map = km_init(_nc, job_name)
         global VarNow
         VarNow = init_var = var_cal(cluster_map)
-        system.back_ptr.print_log('init var =', init_var)
+        print_more('init var = {:.2e}'.format(init_var))
         # start algorithm
         while 1:
             # record the original state
@@ -136,25 +110,31 @@ def k_means_like(system, power=2):
             if diff > epsilon:
                 _j, _i = np.unravel_index(np.argmin(var_matrix, axis=None), var_matrix.shape)
                 if system.ExcitonName[_j] in dic_kick:
-                    system.back_ptr.print_log('add', system.ExcitonName[_j], 'to', set_to_str(list_set[_i]) + ', kick',
-                                              dic_kick[system.ExcitonName[_j]], 'from',
-                                              set_to_str(cluster_map[dic_kick[system.ExcitonName[_j]]]))
+                    print_more(
+                        'add {} to , kick {} from {}'.format(
+                            system.ExcitonName[_j], set_to_str(list_set[_i]), dic_kick[system.ExcitonName[_j]],
+                            set_to_str(cluster_map[dic_kick[system.ExcitonName[_j]]])
+                        )
+                    )
                     cluster_map.move(system.ExcitonName[_j], list_set[_i])
                     cluster_map.cut(dic_kick[system.ExcitonName[_j]])
                 else:
-                    system.back_ptr.print_log('move', system.ExcitonName[_j], 'from', set_to_str(list_set[index_now[_j]]),
-                                              'to', set_to_str(list_set[_i]))
+                    print_more(
+                        'move {} from {} to {}'.format(
+                            system.ExcitonName[_j], set_to_str(list_set[index_now[_j]]), set_to_str(list_set[_i])
+                        )
+                    )
                     cluster_map.move(system.ExcitonName[_j], list_set[_i])
-                system.back_ptr.print_log(str(cluster_map))
+                print_more(cluster_map)
 
                 VarNow = var_cal(cluster_map)
-                system.back_ptr.print_log('var =', VarNow)
+                print_more('var = {:.2e}'.format(VarNow))
 
             # no move: output the results
             else:
-                system.back_ptr.print_log('init var - final var =', init_var - var_cal(cluster_map))
+                print_more('init var - final var = {:.2e}'.format(init_var - var_cal(cluster_map)))
                 cluster_map.save()
-                system.back_ptr.print_log()
+                print_more('')
                 break
 
     # modify the rate matrix to up_triangle (pickup larger one)
@@ -164,7 +144,12 @@ def k_means_like(system, power=2):
     aux_2 = np.where(uptri > lowtri, uptri, lowtri)
 
     # create an aux matrix to calculate variance:
-    aux_2 = (1 / aux_2) ** power
+    def __inverse_aux(_val):
+        if _val == 0:
+            return float('inf')
+        else:
+            return 1 / _val
+    aux_2 = np.vectorize(__inverse_aux)(aux_2) ** power
     aux_2 = np.triu(aux_2, k=1)
     aux_matrix = deepcopy(system.RateConstantMatrix)
     aux_matrix.loc[:] = aux_2 + aux_2.T
@@ -176,11 +161,11 @@ def k_means_like(system, power=2):
     global KM_inf
     if not_inf_sum > KM_inf:
         KM_inf += int(not_inf_sum) + 1
-        system.back_ptr.print_log('renew the KM_inf value to', KM_inf)
+        print_more('renew the KM_inf value to {:.2e}'.format(KM_inf))
     # replace inf with this value
     aux_matrix.values[aux_matrix == -1] = KM_inf
 
-    cost = pass_int(system.back_ptr.setting.Setting['cost'])
+    cost = pass_int(system.back_ptr.setting['cost'])
     iter_range = range(2, min([len(system), 1+int(cost)]))
 
     global VarNow
@@ -194,7 +179,7 @@ def k_means_like(system, power=2):
         df = df.loc[df['Method'] == 'DC']
 
     if len(df) == 0:
-        system.back_ptr.print_log('  run cut-off methods for initial clusters')
+        print_more('  run cut-off methods for initial clusters')
         ref_maps = clx.cut_off_method(system, 4, pass_map=True)
 
     else:

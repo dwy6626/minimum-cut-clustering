@@ -12,11 +12,11 @@ from time import strftime
 import pandas as pd
 import matplotlib as mpl
 from scipy.linalg import expm  # matrix exponent
-from scipy import interpolate as interp
 from scipy import integrate
 
 
 # import local modules
 from .func import *
-from . import nx_aux
 from .wrap import *
+from .module_log import *
+from . import nx_aux

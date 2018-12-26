@@ -5,6 +5,7 @@ from itertools import combinations, permutations, count
 
 # import 3rd party modules
 import numpy as np
+from scipy import interpolate as interp
 from scipy import constants as const
 import networkx as nx
 
@@ -31,26 +32,22 @@ DefaultSetting = {
 # ============================================================
 
 
-# Print many stars
-def print_stars():
-    for i in range(72):
-        print("*", end="")  # no new line
-    print()  # new line
-
-
-# Print many many stars
-def print_1_line_stars():
-    print()
-    print_stars()
-    print()
+# convert string into lines array with no Null component
+def string_to_lines(str1):
+    # split:
+    lines = str1.split('\n')
+    lines = map(lambda x: re.split('[\s,;]+', x), lines)
+    # remove null string
+    lines = [[x for x in l if x] for l in lines]
+    # remove null line
+    return [l for l in lines if l]
 
 
 # Print help message
-def help_message():
+def help_message(exit_id=1):
     from os import popen
-    print('Preparing help message...\n')
     print(popen('cat doc/usage').read())
-    exit(1)
+    exit(exit_id)
 
 
 # format: -n[1,3,6,7-11,n,c]
@@ -103,28 +100,30 @@ def H_suffix(disorder_id):
 
 
 def pass_float(str1, default=0.):
-    if isinstance(str1, float):
-        return str1
-    if isinstance(str1, int):
-        return float(str1)
-    p = re.compile('^\d+(\.\d+)?$')
-    match = p.match(str1)
-    if match:
-        return float(match.group(0))
-    if str1 in DefaultSetting:
-        return float(DefaultSetting[str1])
+    if str1 is not None:
+        if isinstance(str1, float):
+            return str1
+        if isinstance(str1, int):
+            return float(str1)
+        p = re.compile('^\d+(\.\d+)?$')
+        match = p.match(str1)
+        if match:
+            return float(match.group(0))
+        if str1 in DefaultSetting:
+            return float(DefaultSetting[str1])
     return default
 
 
 def pass_int(str1, default=0):
-    if isinstance(str1, int):
-        return str1
-    if isinstance(str1, float):
-        return int(str1)
-    if str1.isdigit():
-        return int(str1)
-    if str1 in DefaultSetting:
-        return int(DefaultSetting[str1])
+    if str1 is not None:
+        if isinstance(str1, int):
+            return str1
+        if isinstance(str1, float):
+            return int(str1)
+        if str1.isdigit():
+            return int(str1)
+        if str1 in DefaultSetting:
+            return int(DefaultSetting[str1])
     return default
 
 
@@ -177,7 +176,7 @@ def paper_method(this_method, option=1):
     :param option:
         0: unmodified
         1: BUC -> minimum cut
-        2: BUC -> bottom-up clustering
+        2: BUC -> bottom-up
         3: TDC -> AC (old)
     :return: renamed method (str)
     """
@@ -186,23 +185,33 @@ def paper_method(this_method, option=1):
         return c_method.replace('TDC', 'AC')
 
     elif option in (1, 2):
-        if this_method == 'BUC':
-
-            if option == 1:
-                return 'minimum cut'
-            else:
-                return 'bottom-up clustering'
-        elif this_method == 'KM':
-            return 'k-means'
-        elif this_method == 'DC':
-            return 'cut-off'  # rate constant cut-off
-        elif this_method == 'TDC':
-            return 'top-down clustering'
+        suffix = ''
+        if 'DC' == this_method[:2] and len(this_method) > 2:
+            suffix = {
+                'max': ' (larger rate)',
+                'geo': ' (geo mean)',
+                'rms': ' (rms rate)'
+            }[this_method[2:]]
+            this_method = 'DC'
+        if '_uN' in this_method:
+            suffix = ' (not normalized)'
+            this_method = this_method.replace('_uN', '')
+        replace_dict = {
+            'BUC': 'minimum cut',
+            'KM': 'k-means',
+            'DC': 'cut-off',
+            'TDC': 'top-down',
+            'SC': 'simple cut',
+            'SR': 'simple ratio cut'
+        }
+        if option == 2:
+            replace_dict['BUC'] = 'bottom-up'
+        this_method = replace_dict.get(this_method, this_method) + suffix
 
     return this_method
 
 
-def method_to_number(method):
+def method_sort_key(method):
     # main methods
     m_ls = ['BUC', 'TDC', 'SR', 'SC', 'DC', 'KM']
     v_ls = [0, 1, 11, 12, 20, 25]
@@ -215,7 +224,7 @@ def method_to_number(method):
         r = 100
 
     # flow normalization
-    if 'uN' in method:
+    if '_uN' in method:
         r += 0.4
         method.replace('_uN', '')
 
@@ -243,7 +252,17 @@ def get_figsize_for_position_plot(size):
 
 
 def get_cluster_graph(cluster):
-    # tuple: rate matrix, energies, name
+    """
+    return a networkx graph object for cluster
+    :param cluster: should be
+                    1. tuple: rate matrix, cluster energies, ...
+                    2. ClusterMap object
+    :return:
+    """
+    # tuple: rate matrix, energies
+    from obj.map import ClusterMap
+    if isinstance(cluster, ClusterMap):
+        cluster = cluster.back_ptr.get_cluster_rate_and_energies(cluster)
     graph = nx.DiGraph()
     graph.add_nodes_from(
         ((cluster[0].keys()[i], {'energy': cluster[1][i]}) for i in range(len(cluster[0].keys())))
@@ -252,3 +271,14 @@ def get_cluster_graph(cluster):
         ((m, n, cluster[0][m][n]) for m, n in permutations(cluster[0].keys(), 2))
     )
     return graph
+
+
+def spline_grid(sequences, x_grid, spline_size):
+    seq2 = np.zeros((sequences.shape[0], spline_size))
+    x_grid2 = np.linspace(0, x_grid[-1], spline_size)
+
+    for i in range(sequences.shape[0]):
+        a1 = list([x for x in sequences[i].T])
+        seq2[i] = interp.InterpolatedUnivariateSpline(x_grid, a1)(x_grid2)
+
+    return seq2, x_grid2

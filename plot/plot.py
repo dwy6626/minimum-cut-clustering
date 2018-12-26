@@ -6,7 +6,7 @@ from matplotlib.collections import PatchCollection
 import matplotlib.animation as anim
 
 
-from aux import *
+from lib import *
 
 DefaultMap = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
               '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
@@ -23,69 +23,20 @@ Markers = [
     'x', '+', 'o', 'd', '^', 'v', '>', '<', '1', '2', '3', '4', 'o', '*', 'h', 'D'
 ]
 
-LHCIImon_IDls_SchlauCohen = [
-    5, 6, 4, 3, 13, 12, 9, 11, 10, 1, 2, 8, 7, 0
-]
-
-LHCIImon_IDls_InstFlux = [
-    12, 13, 3, 5, 7, 8, 6, 4, 9, 11, 10, 2, 1, 0
-]
-
-LHCIImon_IDls = [
-    12, 13, 3, 6, 4, 5, 7, 8, 2, 1, 10, 11, 9, 0
-]
-
-FMO_IDls = [
-    7, 0, 1, 2, 3, 6, 5, 4
-]
 
 # ============================================================
 
 
-def node_color_energy(nodes, energies):
-    energy_list = sorted(zip(energies, nodes))
-
-    cmap2 = colormap(len(nodes), bright=True)
-    cmap2.reverse()
-
-    return {energy_list[i][1]: rgb2hex(cmap2[i]) for i in range(len(nodes))}
-
-
-def colormap(color_number=256, shift=0, bright=False, dark=False, transparency=1, color_map='rainbow'):
-    cmap2 = []
-    cmap = plt.cm.get_cmap(color_map, color_number + shift * 2)
-    for i in range(color_number):
-        rgb = cmap(shift + i)[:3]  # first 3 : rgb
-        if bright:
-            hsv = rgb_to_hsv(rgb)
-            hsv[-1] = 1
-            hsv[-2] *= .6
-            rgb = hsv_to_rgb(hsv)
-        if dark:
-            hsv = rgb_to_hsv(rgb)
-            hsv[-1] = 0.7
-            rgb = hsv_to_rgb(hsv)
-        if transparency != 1:
-            rgb = list(rgb) + [transparency]
-        cmap2.append(rgb)
-    return cmap2
-
-
-# save matplotlib picture:
-def save_fig(name, things=None):
-    print('save figure:', name)
-    plt.savefig(fname='{}'.format(name), bbox_extra_artists=things, bbox_inches='tight')
-
-
+# TODO: for LHCII trimer, the old program accepted kw 'trimer' to sort excitons in each monomers
 def plot_series(
-        series, x_grid, y_names, axes_names, plot_name,
+        series, x_grid, y_names, axes_names, plot_name='',
         y_max=0, x_max=0,
         series2=None, divide=5, zero=False, custom_colormap=None,
-        trimer=False, legend=True,
+        trimer=False, legend=True, save_to_file=False
 ):
-    if divide > 8 and custom_colormap is None:
-        # print('maximum: 8 lines per plot is supported')
-        divide = 8
+    """
+    split data into different figures
+    """
 
     # grouping the excitons:
     # if trimer:
@@ -191,46 +142,44 @@ def plot_series(
             this_name = '{}_{}'.format(plot_name, g_i)
         else:
             this_name = plot_name
-        save_fig(this_name, fig_objects)
-        plt.close()
+        save_fig(this_name, fig_objects, output=save_to_file)
 
 
 def plot_cost(
-        system, assigned_cost=100, print_marker=True,
-        y_max=0, legend=True
+        pop_diff, number_of_cluster, methods, plot_name='',
+        x_max=100, print_marker=True,
+        y_max=0, legend=True, save_to_file=False
 ):
-    # https://matplotlib.org/api/markers_api.html#module-matplotlib.markers
+    """
+    plot the population difference
+    :param pop_diff: array of array, population difference
+    :param number_of_cluster: array of array, number of cluster of
+                              given pop_diff, sorted
+    :param methods: array, clustering method name for legend
 
-    if not system.is_population_difference_calculated():
-        system.cal_cost()
+    :param plot_name: name prefix of the saved figures
+    :param print_marker: assert to mark data
+    :param x_max: set the x limit of the figures
+    :param y_max: set the y limit of the figures
+    :param legend: (default = True)
+    :param save_to_file: save figure or show only
+    """
 
-    if len(system) > assigned_cost:
-        len_x = assigned_cost
-    else:
-        len_x = len(system) - 1
+    len_x = max([max(n) for n in number_of_cluster])
+    if len_x > x_max:
+        len_x = x_max
 
-    df = system.back_ptr.data_frame[system.get_index()]
     fig = plt.figure()
     ax = fig.gca()
     i_marker = -1
 
     plot_params = {}
-    for it_m in sorted(set(df['Method']), key=method_to_number):
-
-        # rename methods
-        c_method = paper_method(it_m, set(df['Method']))
-
-        to_plot = df.loc[df['Method'] == it_m]
-        plot_value = to_plot['PopDiff']
-        plot_number = to_plot['N']
-
+    for y_data, x_data, m in zip(pop_diff, number_of_cluster, methods):
+        m_name = paper_method(m)
         if print_marker:
             i_marker += 1
             plot_params['marker'] = Markers[i_marker]
-
-        # draw cost
-        plt.plot(*zip(*sorted(zip(plot_number, plot_value))), label=c_method,
-                 **plot_params)
+        plt.plot(x_data, y_data, label=m_name, **plot_params)
 
     # figure settings
     plt.xlabel('Number of Clusters')
@@ -251,12 +200,15 @@ def plot_cost(
         lgn = plt.legend(loc='upper right')
         fig_objects.append(lgn)
 
-    save_fig(system.get_output_name('PopDiff'), fig_objects)
-    plt.close()
+    save_fig(plot_name, fig_objects, output=save_to_file)
 
 
-def plot_tf(system, clx_map=None, cutoff=0.1):
-    print('option -I: site-exciton corresponding plot')
+def plot_exciton_population_on_site_basis(
+        exciton_names, exciton_energies, site_names, eigenvectors,
+        cluster_map=None, site_order=None, ref_exciton_names=None, ref_exciton_energies=None,
+        plot_name='', cutoff=0.1, save_to_file=False
+):
+    print_normal('option -I: site-exciton corresponding plot')
 
     def pickup_str(str1, str2):
         r = ''
@@ -269,64 +221,67 @@ def plot_tf(system, clx_map=None, cutoff=0.1):
             r += '  '
         return r
 
-    setting = system.back_ptr.setting
-    energies, excitons = zip(*sorted(zip(system.ExcitonEnergies, system.ExcitonName)))
+    size = len(exciton_names)
+    energies, excitons = zip(*sorted(zip(exciton_energies, exciton_names)))
     excitons = list(excitons)
 
-    if len(system) > 20:
+    if size > 20:
         fig_size = [24, 14]
-    elif len(system) > 10:
+    elif size > 10:
         fig_size = [10, 8]
     else:
         fig_size = [8, 6]
-    ecl_size = fig_size[0] / len(system)
+    ecl_size = fig_size[0] / size
 
     fig = plt.figure(figsize=fig_size)
     ax = fig.gca()
     patches = []
     min_energy = energies[0]
     max_energy = energies[-1]
-    a = ecl_size * (len(system) - 1) / fig_size[0] * 0.7
+    a = ecl_size * (size - 1) / fig_size[0] * 0.7
     b = ecl_size * (max_energy - min_energy) / fig_size[1]
     x_label = []
 
-    if 'LHC2mon' in setting.InputFileName:
-        id_ls = LHCIImon_IDls
-    elif 'FMO' in setting.InputFileName:
-        id_ls = FMO_IDls
-    else:
-        id_ls = list(range(len(system)))
+    id_ls = list(range(size))
+    if site_order:
+        if not set(site_names) - set(site_order):
+            rc_order = list(site_order)
+            id_ls = [site_names.index(n) for n in rc_order]
 
     # change the sequence of basis in eigenvectors
-    v2 = system.EigenVectors ** 2
-    indexing = [system.ExcitonName.index(n) for n in excitons]
+    v2 = eigenvectors ** 2
+    indexing = [exciton_names.index(n) for n in excitons]
     tf = v2[id_ls, ][:, indexing]
 
     color_dict = dict()
-    if clx_map:
-        # sort clusters by minimum energy member:
-        ref_energies = np.array(system.back_ptr.reference_system.ExcitonEnergies)
-        min_energies = [min((ref_energies[system.ExcitonName.index(n)] for n in cluster)) for cluster in clx_map.groups()]
-        groups = [s for _, s in sorted(zip(min_energies, clx_map.groups()))]
+    if cluster_map:
+        # if not provide excitons in h0:
+        if ref_exciton_energies is None or ref_exciton_names is None:
+            ref_exciton_names, ref_exciton_energies = exciton_names, exciton_energies
 
-        color_number = len(clx_map)
+        # sort clusters by minimum energy member:
+        ref_energies = np.array(ref_exciton_energies)
+        min_energies = [min((ref_energies[ref_exciton_names.index(n)] for n in cluster)) for cluster in cluster_map.groups()]
+        groups = [s for _, s in sorted(zip(min_energies, cluster_map.groups()))]
+
+        color_number = len(cluster_map)
         # for the color code
         for i, c in enumerate(groups):
             for n in c:
-                color_dict[n] = len(clx_map) - i - 1
+                color_dict[n] = len(cluster_map) - i - 1
 
     else:
-        color_number = len(system)
+        color_number = size
         # sort color by the reference system
-        for n in system.ExcitonName:
-            color_dict[n] = len(system) - system.back_ptr.reference_system.ExcitonName.index(n) - 1
+        for n in exciton_names:
+            color_dict[n] = size - ref_exciton_names.index(n) - 1
 
     color_array = []
     cmap2 = colormap(color_number)
 
     # axis parameters
     tick_params = {}
-    x_n = np.arange(len(system))
+    x_n = np.arange(size)
     if len(x_n) > 30:
         plt.xticks(rotation=45)
         tick_params['labelsize'] = 10
@@ -334,9 +289,9 @@ def plot_tf(system, clx_map=None, cutoff=0.1):
         plt.xticks(rotation=30)
         tick_params['labelsize'] = 25
 
-    for i in range(len(system)):
-        x_label.append(system.SiteName[id_ls[i]])
-        for j in range(len(system)):
+    for i in range(size):
+        x_label.append(site_names[id_ls[i]])
+        for j in range(size):
             e = energies[j]
             if tf[i, j] > cutoff:
                 size_b, _ = get_pattern_size(tf[i, j], maxsize=b)
@@ -354,8 +309,6 @@ def plot_tf(system, clx_map=None, cutoff=0.1):
     # y grid
     things = []
     name_ls = excitons.copy()
-    print(name_ls)
-    print(energies)
 
     # check too close y: j and j+1
     for i, y in enumerate(energies[:-1]):
@@ -364,17 +317,17 @@ def plot_tf(system, clx_map=None, cutoff=0.1):
 
     # y2 title
     maxlen = max([len(s.replace(",", "")) for s in name_ls])
-    y2title = plt.text(len(system)-1 + a/2 + maxlen*a*0.045*tick_params['labelsize'],
+    y2title = plt.text(size-1 + a/2 + maxlen*a*0.045*tick_params['labelsize'],
                        (max_energy - min_energy) / 2 + min_energy,
                        'Exciton States', rotation=270,
                        va='center', ha='left')
     things.append(y2title)
 
     # y2 ticks
-    y2_x = len(system)-1+2*a/3
+    y2_x = size-1+2*a/3
     for i, state in enumerate(excitons):
         line_leng = 10
-        line_x = np.linspace(-a/2, len(system)-1+a/2, line_leng)
+        line_x = np.linspace(-a/2, size-1+a/2, line_leng)
         line_y = np.ones(line_leng) * energies[i]
         plt.plot(line_x, line_y, '--', c='#d8d8d8', zorder=0)
         color = cmap2[color_dict[state]]
@@ -386,7 +339,7 @@ def plot_tf(system, clx_map=None, cutoff=0.1):
     p.set_color(color_array)
     ax.add_collection(p)
 
-    plt.axis([-a/2, len(system)-1+a/2, min_energy-b/2, max_energy+b/2])
+    plt.axis([-a/2, size-1+a/2, min_energy-b/2, max_energy+b/2])
 
     ax.set_xticks(x_n)
     ax.set_xticklabels(x_label)
@@ -397,12 +350,196 @@ def plot_tf(system, clx_map=None, cutoff=0.1):
     plt.xlabel('Site')
     plt.ylabel('Exciton Energies (cm' + r'$^{\mathregular{-1}}$' ')')
 
-    if clx_map:
-        str1 = '{}_{}c_'.format(clx_map.method, len(clx_map))
+    save_fig(plot_name + 'SiteExciton', things, output=save_to_file)
+
+
+def plot_dyanmics(
+    pop_seq, time_sequence, pop_names,
+    plot_name='', pop_seq2=None,
+    y_max=0, x_max=0, legend=True,
+    divide=100, save_to_file=False
+):
+    """
+    plot population dynamics
+    handle: the axes names, colors
+    """
+    size = len(pop_names)
+    plot_name += 'Dynamics'
+    axes_names = ('Time (ps)', 'Population')
+
+    if divide < min(9, size):
+        cmap = DefaultMap[:divide] * ((size - 1) // divide + 1)
     else:
-        str1 = 'Full_'
-    save_fig(system.get_output_name(str1 + 'SiteExciton'), things)
-    plt.close()
+        cmap = colormap(size)
+        cmap.reverse()
+
+    plot_series(
+        pop_seq, time_sequence, pop_names, axes_names, plot_name,
+        series2=pop_seq2, divide=divide, custom_colormap=cmap,
+        y_max=y_max, x_max=x_max,
+        legend=legend, save_to_file=save_to_file
+    )
+    return
+
+
+def population_animatation(
+        pop_seq, pos_file, site_names, eigenvectors, time_sequence, anime_name,
+        dpi=100, ps1=False, maxsize=20000, allsite=False
+):
+    print_normal('Animate population dynamics')
+
+    size, length = np.shape(pop_seq)
+    fig = plt.figure(figsize=get_figsize_for_position_plot(size))
+    ax = fig.gca()
+
+    points = pos_file[:, :2]
+    points[:, 1] += np.vectorize(get_p_shift)(site_names, ps1)
+
+    size_ar1 = np.vectorize(get_pattern_size)(pop_seq[:, 0], maxsize=maxsize)
+    scat = ax.scatter(points[:, 0], points[:, 1], alpha=.4,
+                      s=size_ar1[0], c=size_ar1[1],
+                      edgecolors=mpl.colors.colorConverter.to_rgba('w', alpha=0.1))
+
+    set_ax_limit(ax, pos_file, ps1)
+
+    # site label
+    for i, site in enumerate(site_names):
+        if not ps1 or (allsite or site in PSI_sitelist):
+            plt.text(*points[i], site,
+                     # va='center',
+                     ha='center',
+                     size=12, alpha=0.8)
+
+    txt = plt.text(*text_pos(ax), '', size=14)
+
+    def pop_update(frame):
+        _time = time_sequence[frame]
+        txt.set_text('{:.2f} ps'.format(_time))
+        _size_ar = np.vectorize(get_pattern_size)(pop_seq[:, frame].dot(eigenvectors), maxsize=maxsize)
+        scat.set_sizes(_size_ar[0])
+        scat.set_facecolors(_size_ar[1])
+        print_more('frame {}, {:.2f} ps'.format(frame, _time))
+
+    animation = anim.FuncAnimation(fig, pop_update, frames=length)
+
+    # Set up formatting for the movie files
+    writer = anim.writers['ffmpeg'](metadata=dict(artist='YCC lab'), fps=20)
+    name = anime_name + '.mp4'
+    print_normal('save animation: {}'.format(name))
+    animation.save(name, writer=writer, dpi=dpi)
+
+
+def plot_exst(system, cutoff=0.1, cluster_map=None, allsite=False, save_to_file=False):
+    """
+    plot the positions of excitons
+    real space projection to 2D
+    """
+    site_positions = system.back_ptr.SitePos
+
+    if not system.has_hamiltonian() or site_positions is None:
+        raise Warning('please provide Hamiltonian and Cartesian coordinates')
+
+    tf = system.EigenVectors ** 2
+    cutoff **= 2
+
+    text_param = {'ha': 'center', 'size': 12}
+
+    if cluster_map:
+        plot_name = '{}_{}c_'.format(cluster_map.method, len(cluster_map))
+        ref_energies = np.array(system.get_original().ExcitonEnergies)
+        min_energies = [min((ref_energies[system.ExcitonName.index(n)] for n in cluster)) for cluster in cluster_map.groups()]
+        iter_states = [s for _, s in sorted(zip(min_energies, cluster_map.groups()))]
+    else:
+        plot_name = 'Full_'
+        iter_states = [[s] for s in system.ExcitonName]
+
+    importance = {}
+
+    for state_ls in iter_states:
+        fig = plt.figure(figsize=get_figsize_for_position_plot(len(system)))
+        ax = fig.gca()
+
+        for i in range(len(system)):
+            site = system.SiteName[i]
+            x, y, z = site_positions[i]
+            p_shift = get_p_shift(site)
+
+            tf_ls = []
+
+            # sum over the coefficient ^ 2
+            for state in state_ls:
+                tf_ls.append(tf[i, system.ExcitonName.index(state)])
+            importance[site] = sum(tf_ls)
+
+            size, color = get_pattern_size(importance[site], cutoff=cutoff, maxsize=2000, minsize=10)
+
+            plt.scatter(x, y + p_shift,
+                        s=size, c=color, alpha=.4,
+                        edgecolors=mpl.colors.colorConverter.to_rgba('w', alpha=0.1))
+
+        for site, (x, y, z) in zip(system.SiteName, site_positions):
+            p_shift = get_p_shift(site)
+            if importance[site] / cutoff >= 1 or allsite:
+                plt.text(x, y + p_shift, site, **text_param, va='center')
+
+        exst_name = wrap_str(state_ls)
+        title = 'exciton state {}'.format(exst_name)
+
+        set_ax_limit(ax, site_positions)
+
+        plt.text(*text_pos(ax), title, size=14)
+        plt.text(*text_pos(ax, True),
+                 'cutoff = {:.2f}'.format(cutoff), size=12, ha='right')
+
+        save_fig(system.get_output_name(plot_name + 'Excitons_{}'.format(exst_name)), output=save_to_file)
+
+
+# ============================================================
+
+
+def node_color_energy(nodes, energies):
+    energy_list = sorted(zip(energies, nodes))
+
+    cmap2 = colormap(len(nodes), bright=True)
+    cmap2.reverse()
+
+    return {energy_list[i][1]: rgb2hex(cmap2[i]) for i in range(len(nodes))}
+
+
+def colormap(color_number=256, shift=0, bright=False, dark=False, transparency=1, color_map='rainbow'):
+    cmap2 = []
+    cmap = plt.cm.get_cmap(color_map, color_number + shift * 2)
+    for i in range(color_number):
+        rgb = cmap(shift + i)[:3]  # first 3 : rgb
+        if bright:
+            hsv = rgb_to_hsv(rgb)
+            hsv[-1] = 1
+            hsv[-2] *= .6
+            rgb = hsv_to_rgb(hsv)
+        if dark:
+            hsv = rgb_to_hsv(rgb)
+            hsv[-1] = 0.7
+            rgb = hsv_to_rgb(hsv)
+        if transparency != 1:
+            rgb = list(rgb) + [transparency]
+        cmap2.append(rgb)
+    return cmap2
+
+
+def save_fig(name, things=None, output=True):
+    """
+    save (and close) or show matplotlib picture
+    :param name: file name
+    :param things: plt.savefig(bbox_extra_artists=things)
+    :param output: show picture only
+    :return:
+    """
+    if output:
+        print_normal('save figure: {}'.format(name))
+        plt.savefig(fname='{}'.format(name), bbox_extra_artists=things, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
 
 
 def get_p_shift(site, ps1=False):
@@ -469,116 +606,3 @@ def text_pos(ax, right=False, medium=False, xshift=0.02, yshift=0.02):
         x = xshift * lim_diff(*ax.get_xlim()) + ax.get_xlim()[0]
 
     return x, y
-
-
-def population_animatation(
-        pop_seq, pos_file, site_names, eigenvectors, time_sequence, anime_name,
-        dpi=100, ps1=False, maxsize=20000, allsite=False
-):
-    print('Animate population dynamics')
-
-    size, length = np.shape(pop_seq)
-    fig = plt.figure(figsize=get_figsize_for_position_plot(size))
-    ax = fig.gca()
-
-    points = pos_file[:, :2]
-    points[:, 1] += np.vectorize(get_p_shift)(site_names, ps1)
-
-    size_ar1 = np.vectorize(get_pattern_size)(pop_seq[:, 0], maxsize=maxsize)
-    scat = ax.scatter(points[:, 0], points[:, 1], alpha=.4,
-                      s=size_ar1[0], c=size_ar1[1],
-                      edgecolors=mpl.colors.colorConverter.to_rgba('w', alpha=0.1))
-
-    set_ax_limit(ax, pos_file, ps1)
-
-    # site label
-    for i, site in enumerate(site_names):
-        if not ps1 or (allsite or site in PSI_sitelist):
-            plt.text(*points[i], site,
-                     # va='center',
-                     ha='center',
-                     size=12, alpha=0.8)
-
-    txt = plt.text(*text_pos(ax), '', size=14)
-
-    def pop_update(frame):
-        _time = time_sequence[frame]
-        txt.set_text('{:.2f} ps'.format(_time))
-        _size_ar = np.vectorize(get_pattern_size)(pop_seq[:, frame].dot(eigenvectors), maxsize=maxsize)
-        scat.set_sizes(_size_ar[0])
-        scat.set_facecolors(_size_ar[1])
-        print('frame {}, {:.2f} ps'.format(frame, _time))
-
-    animation = anim.FuncAnimation(fig, pop_update, frames=length)
-
-    # Set up formatting for the movie files
-    writer = anim.writers['ffmpeg'](metadata=dict(artist='YCC lab'), fps=20)
-    name = anime_name + '.mp4'
-    print('save animation: {}'.format(name))
-    animation.save(name, writer=writer, dpi=dpi)
-
-
-def plot_exst(system, cutoff=0.1, clx_map=None, allsite=False):
-    """
-    plot the positions of excitons
-    real space projection to 2D
-    """
-    site_positions = system.back_ptr.SitePos
-
-    if not system.has_hamiltonian() or site_positions is None:
-        raise Warning('please provide Hamiltonian and Cartesian coordinates')
-
-    tf = system.EigenVectors ** 2
-    cutoff **= 2
-
-    text_param = {'ha': 'center', 'size': 12}
-
-    if clx_map:
-        plot_name = '{}_{}c_'.format(clx_map.method, len(clx_map))
-        ref_energies = np.array(system.back_ptr.reference_system.ExcitonEnergies)
-        min_energies = [min((ref_energies[system.ExcitonName.index(n)] for n in cluster)) for cluster in clx_map.groups()]
-        iter_states = [s for _, s in sorted(zip(min_energies, clx_map.groups()))]
-    else:
-        plot_name = 'Full_'
-        iter_states = [[s] for s in system.ExcitonName]
-
-    importance = {}
-
-    for state_ls in iter_states:
-        fig = plt.figure(figsize=get_figsize_for_position_plot(len(system)))
-        ax = fig.gca()
-
-        for i in range(len(system)):
-            site = system.SiteName[i]
-            x, y, z = site_positions[i]
-            p_shift = get_p_shift(site)
-
-            tf_ls = []
-
-            # sum over the coefficient ^ 2
-            for state in state_ls:
-                tf_ls.append(tf[i, system.ExcitonName.index(state)])
-            importance[site] = sum(tf_ls)
-
-            size, color = get_pattern_size(importance[site], cutoff=cutoff, maxsize=2000, minsize=10)
-
-            plt.scatter(x, y + p_shift,
-                        s=size, c=color, alpha=.4,
-                        edgecolors=mpl.colors.colorConverter.to_rgba('w', alpha=0.1))
-
-        for site, (x, y, z) in zip(system.SiteName, site_positions):
-            p_shift = get_p_shift(site)
-            if importance[site] / cutoff >= 1 or allsite:
-                plt.text(x, y + p_shift, site, **text_param, va='center')
-
-        exst_name = wrap_str(state_ls)
-        title = 'exciton state {}'.format(exst_name)
-
-        set_ax_limit(ax, site_positions)
-
-        plt.text(*text_pos(ax), title, size=14)
-        plt.text(*text_pos(ax, True),
-                 'cutoff = {:.2f}'.format(cutoff), size=12, ha='right')
-
-        save_fig(system.get_output_name(plot_name + 'Excitons_{}'.format(exst_name)))
-        plt.close()

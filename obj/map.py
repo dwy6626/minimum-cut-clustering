@@ -1,4 +1,4 @@
-from aux import *
+from lib import *
 from numpy.random import randint
 
 
@@ -6,7 +6,7 @@ from numpy.random import randint
 
 
 # the class manipulate nodes and cluster
-class Map:
+class ClusterMap:
     def __init__(self, system, method, one_group=True, site_map=False):
         # initialize: a cluster list
         self.__data = []
@@ -31,18 +31,19 @@ class Map:
                 self.__data.append([n])
                 self[n] = self.__data[-1]
 
-        # some info
-        self.__all_int = True
         for n in self.__dict:
             if not n.isdigit():
-                self.__all_int = False
+                self.__sort_key = sort_str_key
                 break
+        else:
+            self.__sort_key = sort_int_key
 
+        # some info
         self.method = method
         self.__info = None
-        # self.H_ind = h_id if h_id is not None else network.graph['id']
 
         self.__sorted = False
+        self.__print_decimal = '.' + self.back_ptr.back_ptr.setting['decimal'] + 'f'
 
     def __len__(self):
         return self.__number_of_cluster
@@ -200,20 +201,13 @@ class Map:
 
     def __sort(self):
         self.__sorted = True
-        if self.__all_int:
-            def __sort_key(x):
-                return int(x)
-
-        else:
-            def __sort_key(x):
-                return x
 
         new_order = []
         # sort node by number
         for i in range(self.__number_of_cluster):
-            new_order.append(sorted(self.__data[i], key=__sort_key))
+            new_order.append(sorted(self.__data[i], key=self.__sort_key))
         # sort cluster by smallest number
-        new_order = sorted(new_order, key=lambda x: __sort_key(x[0]))
+        new_order = sorted(new_order, key=lambda x: self.__sort_key(x[0]))
         self.__data[:self.__number_of_cluster] = new_order
 
         self.__update_pointer()
@@ -222,9 +216,7 @@ class Map:
         self.__info = str1
 
     def update_cutoff(self, cutoff):
-        self.update_info('Cut = ' +
-                         format(cutoff, '.' + str(self.back_ptr.back_ptr.setting.Setting['decimal']) + 'f')
-                         + ':')
+        self.update_info('Cut = ' + format(cutoff, self.__print_decimal) + ':')
 
     def groups(self):
         if not self.__sorted:
@@ -244,26 +236,49 @@ class Map:
     # generate a copy with same back_ptr
     # site_map options is not supported
     def copy(self):
-        new_map = Map(self.back_ptr, self.method, one_group=False)
+        new_map = ClusterMap(self.back_ptr, self.method, one_group=False)
         for g in self.groups():
             new_map.group_up(g)
         return new_map
 
     def save(self):
+        """
+        after clustering, print the cluster result and save back to the project
+        """
         self.print_all()
         proj = self.back_ptr.back_ptr
 
         # add a coarse-grained model
-        m = self.method
         h = self.back_ptr.get_index()
-        n = len(self)
-        mp = self.copy()
-        c = None
-        olfac = proj.overlap_factors[h]
-
-        sr = pd.Series((m, n, mp, olfac, c), index=proj.col)
 
         if len(proj.data_frame) <= h:
             proj.data_frame.append(pd.DataFrame(columns=proj.col, dtype=object))
 
-        proj.data_frame[h].loc[len(proj.data_frame[h])] = sr
+        df = proj.data_frame[h]
+
+        # run an self check to prevent adding redundant table element
+        for i, (m, n, _, _, _) in df.iterrows():
+            if m == self.method and n == len(self):
+                return
+
+        m = self.method
+        n = len(self)
+        mp = self.copy()
+        c = None
+        olfac = proj.overlap_factors[h]
+        sr = pd.Series((m, n, mp, olfac, c), index=proj.col)
+
+        df.loc[len(proj.data_frame[h])] = sr
+
+
+# ============================================================
+
+
+def sort_str_key(x):
+    return x
+
+
+def sort_int_key(x):
+    return int(x)
+
+

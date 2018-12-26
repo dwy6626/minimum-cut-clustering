@@ -5,19 +5,20 @@
 # BSD license.
 
 
-from aux import *
+from lib import *
 
 
 # Global Variables
 BackwardFlow = 'back_cap'
 Capacity = 'weight'
-FFAName = 'ffa'
+FFA_FlowName = 'ffa'
 
 
 # ============================================================
 
 
 def ford_fulkerson_impl(G, s, t, path_decomposition=False, cutoff=0.0001):
+    # TODO: implement cutoff?
     auxiliary = _create_auxiliary_digraph(G)
     flow_value = 0   # Initial feasible flow.
     path_ls = []
@@ -40,8 +41,8 @@ def ford_fulkerson_impl(G, s, t, path_decomposition=False, cutoff=0.0001):
         path_ls.append([path_nodes, path_capacity])
 
         flow_value += path_capacity
-        print('path:', path_nodes)
-        print('  flow: {:.3f}, total flow: {:.3f}'.format(path_capacity, flow_value))
+        print_more('path: {}'.format(path_nodes))
+        print_more('  flow: {:.3f}, total flow: {:.3f}'.format(path_capacity, flow_value))
 
         # Augment the flow along the path.
         for u, v in path_edges:
@@ -142,7 +143,7 @@ def ford_fulkerson(G, s, t, path_decomposition=False):
         flow_dict = _create_flow_dict(G, R)
         for s_itr, t_dict in flow_dict.items():
             for t_itr, flow in t_dict.items():
-                G[s_itr][t_itr][FFAName] = flow
+                G[s_itr][t_itr][FFA_FlowName] = flow
 
     return flow_value, partition
 
@@ -213,18 +214,36 @@ def widest_path(G, source, target):
 
 
 # option -F
-def flow_analysis(system, cluster=None, draw=False):
+def flow_analysis(system, cluster=None):
+    """
+    FFA flow decomposition:
+
+    The legendary Ford-Fulkerson algorithm, using the widest path as augment path
+
+    :param system: reference system
+    :param cluster: should be
+                    1. tuple: rate matrix, cluster energies, (plot name)
+                    2. ClusterMap object
+    :param draw: assert to draw flow graph (default = False)
+    :return: flow matrix, flow graph with flow in attr: ['ffa']
+    """
+    # TODO: get_cluster_rate_and_energies() redundant in main.py
+    # TODO: maybe: 1. pass the graph back?  2. another function to draw flow
     setting = system.back_ptr.setting
     node_ls = system.ExcitonName
 
-    if setting.Setting['init'] in node_ls:
-        source = setting.Setting['init']
+    if setting['init'] in node_ls:
+        source = setting['init']
     else:
-        source = setting.Setting.get('s', node_ls[-1])
+        source = setting.get('s', node_ls[-1])
 
-    target = setting.Setting.get('t', 'sink' if 'CTsink' in setting.KeyWords else node_ls[0])
+    target = setting.get('t', 'sink' if 'CTsink' in setting else node_ls[0])
 
+    from obj.map import ClusterMap
     if cluster is not None:
+        if isinstance(cluster, ClusterMap):
+            cluster = system.get_cluster_rate_and_energies(cluster)
+
         network = get_cluster_graph(cluster)
         if source not in network.nodes():
             for c in network.nodes():
@@ -247,12 +266,8 @@ def flow_analysis(system, cluster=None, draw=False):
     max_flow, _ = ford_fulkerson(network, source, target, path_decomposition=True)
     print('flow: ', format(max_flow, '.2f'))
 
-    print('flow matrix:')
-    flow_matrix = nx.linalg.attrmatrix.attr_matrix(network, edge_attr=FFAName, rc_order=order).T
-    print(flow_matrix)
+    print_normal('flow matrix:')
+    flow_matrix = nx.linalg.attrmatrix.attr_matrix(network, edge_attr=FFA_FlowName, rc_order=order).T
+    print_normal(flow_matrix)
 
-    if draw:
-        nx_aux.nx_graph_draw(network, system, system.get_plot_name() + 'FFA', label=FFAName, rc_order=order)
-
-    # flow matrix
-    return flow_matrix
+    return flow_matrix, network

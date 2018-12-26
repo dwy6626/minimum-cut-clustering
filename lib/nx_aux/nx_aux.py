@@ -1,25 +1,29 @@
 from . import nx_pydot
+from .. import module_log
 
 
-def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energy', rc_order=None):
+# TODO: default rc_order vs no order?
+# TODO: unpack setting to function parameters
+def nx_graph_draw(ref_graph, dot_path='', setting=None, plot_name='', label='weight', e_name='energy', rc_order=None):
     # prevent circular import
-    from aux import pass_int, pass_float, nx, wraps, os
+    from lib import pass_int, pass_float, nx, wraps, os
     from plot import colormap
-    from alg import flow_kmeans, FFAName
+    from alg import flow_kmeans, FFA_FlowName
     from matplotlib.colors import rgb2hex
 
-    setting = system.back_ptr.setting
+    if not setting:
+        from obj.setting import Setting
+        setting = Setting()
 
-    file_name = plot_name + '_' + str(setting.Setting['cutoff']).replace('.', '')
-    file_format = setting.Setting['format'].lower()
-    dot_path = system.back_ptr.config.get_graphaviz_dot_path()
+    file_name = plot_name + '_' + str(setting['cutoff']).replace('.', '')
+    file_format = setting['format'].lower()
     dot_file = file_name + '.dot'
     image_file = file_name + '.' + file_format
 
     # wrap
     graph = ref_graph.copy()
     graph.graph['ranksep'] = .7
-    graph.graph['dpi'] = pass_int(setting.Setting['dpi'])
+    graph.graph['dpi'] = pass_int(setting['dpi'])
 
     # node color
     if rc_order is not None:
@@ -35,9 +39,9 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
         graph.nodes[n]['color'] = rgb2hex(c)
 
     # wrap edges
-    max_flow_ratio = FFAName == label
-    decimal = pass_int(setting.Setting['decimal'])
-    cutoff = pass_float(setting.Setting['cutoff'])
+    max_flow_ratio = FFA_FlowName == label
+    decimal = pass_int(setting['decimal'])
+    cutoff = pass_float(setting['cutoff'])
 
     labels = []
     for s, t, cap in ref_graph.edges(data=label):
@@ -47,7 +51,7 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
             continue
 
         # provide a special rule for LHCII monomer
-        if 'LHC8' in setting.KeyWords:
+        if 'LHC8' in setting:
             LHC_sp_rule = (s == '8' and cap > 0.1 ** decimal / 2)
         else:
             LHC_sp_rule = False
@@ -68,7 +72,7 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
 
     # mapping name
     mapping = {}
-    for n, r in zip(ref_graph.nodes(), wraps(ref_graph.nodes())):
+    for n, r in zip(ref_graph.nodes(), wraps(ref_graph.nodes(), width=12)):
         mapping[n] = r
         graph.nodes[n]['fontname'] = 'Arial bold'
         if len(n.split()) > 2:
@@ -79,7 +83,8 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
         else:
             graph.nodes[n]['fontsize'] = 24
     graph = nx.relabel_nodes(graph, mapping, copy=False)
-    rc_order = [mapping[n] for n in rc_order]
+    if rc_order is not None:
+        rc_order = [mapping[n] for n in rc_order]
 
     # next step: width of flow:
     if labels:
@@ -93,7 +98,7 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
             dic['weight'] = dic['penwidth']
 
             # ranking by rc_order/energies
-            if 'norankdown' not in setting.KeyWords:
+            if 'norankdown' not in setting:
                 if rc_order is not None:
                     change = rc_order.index(s) < rc_order.index(t)
                 else:
@@ -105,7 +110,7 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
 
             # external label
             # the mechanism need to be optimized
-            if 'xlabel' in setting.KeyWords:
+            if 'xlabel' in setting:
                 lab_dict = {}
                 for s, t, lab in [(s, t, lab) for s, t, lab in graph.edges(data='label') if lab]:
                     graph[s][t]['taillabel'] = lab
@@ -120,9 +125,8 @@ def nx_graph_draw(ref_graph, system, plot_name='', label='weight', e_name='energ
     # use pydot and system cmd instead of pygraphviz (which is out-of-date)
     with open(dot_file, 'w') as f:
         nx_pydot.write_dot(graph, f)
+    module_log.print_normal('write dot file: {}'.format(dot_file))
 
-    os.system(dot_path + " -T" + file_format + " " + dot_file + " -o " + image_file)
-
-    # save to:
-    print('plot graph:', image_file)
-    print('write dot file:', dot_file)
+    if dot_path:
+        os.system(dot_path + " -T" + file_format + " " + dot_file + " -o " + image_file)
+        module_log.print_normal('plot graph: {}'.format(image_file))
