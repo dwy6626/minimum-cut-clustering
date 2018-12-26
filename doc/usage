@@ -165,9 +165,6 @@ KEYWORD
     --allsite
         mark all sites in animation / exciton plot
 
-    --norankdown
-        cancel the artificial ranking from highest energy to lowest energy
-
     --nolegend
         pyplot without legends
 

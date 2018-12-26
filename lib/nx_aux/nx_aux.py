@@ -2,9 +2,18 @@ from . import nx_pydot
 from .. import module_log
 
 
-# TODO: default rc_order vs no order?
-# TODO: unpack setting to function parameters
-def nx_graph_draw(ref_graph, dot_path='', setting=None, plot_name='', label='weight', e_name='energy', rc_order=None):
+# TODO: unpack setting to function parameters?
+def nx_graph_draw(ref_graph, dot_path='', setting=None, plot_name='', label='weight', rc_order=None):
+    """
+    draw a network graph into a .dot file
+
+    :param ref_graph: plot to graph
+    :param dot_path: if provided, use dot program (in graphivz) to plot the network figure
+    :param setting: a Setting object
+    :param plot_name: name suffix of the saved figure
+    :param label: edge label in the graph (default is 'weight')
+    :param rc_order: node ranking in the figure
+    """
     # prevent circular import
     from lib import pass_int, pass_float, nx, wraps, os
     from plot import colormap
@@ -32,7 +41,7 @@ def nx_graph_draw(ref_graph, dot_path='', setting=None, plot_name='', label='wei
         color_order = rc_order
     else:
         colors = colormap(len(ref_graph), bright=True)
-        color_order, energies = zip(*sorted(graph.nodes(data=e_name)))
+        color_order, _ = zip(*sorted(graph.nodes(data='energy')))
 
     for n, c in zip(color_order, colors):
         graph.nodes[n]['style'] = 'filled'
@@ -97,14 +106,10 @@ def nx_graph_draw(ref_graph, dot_path='', setting=None, plot_name='', label='wei
             dic['penwidth'], dic['color'] = flow_dict[cap]
             dic['weight'] = dic['penwidth']
 
-            # ranking by rc_order/energies
-            if 'norankdown' not in setting:
-                if rc_order is not None:
-                    change = rc_order.index(s) < rc_order.index(t)
-                else:
-                    change = graph.nodes[s][e_name] < graph.nodes[t][e_name]
-                if change:
-                    graph[s][t]['constraint'] = 'false'
+            # ranking
+            if rc_order is not None:
+                if rc_order.index(s) > rc_order.index(t):
+                    graph[s][t]['constraint'] = 'true'
                 else:
                     graph[s][t]['constraint'] = 'true'
 
