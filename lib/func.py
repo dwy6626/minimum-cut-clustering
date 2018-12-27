@@ -260,7 +260,7 @@ def get_cluster_graph(cluster):
     :return:
     """
     # tuple: rate matrix, energies
-    from obj.map import ClusterMap
+    from obj.cluster_map import ClusterMap
     if isinstance(cluster, ClusterMap):
         cluster = cluster.back_ptr.get_cluster_rate_and_energies(cluster)
     graph = nx.DiGraph()

@@ -4,18 +4,11 @@
 # TODO: rewrite the 1000 disorder flow analysis on 3-cluster model
 
 # ============================================================
-# SYSTEM CHECK
-# ============================================================
-
-
-from obj import *
-import lib
-
-
-# ============================================================
 # INPUT
 # ============================================================
 
+from obj import *
+import lib
 from sys import argv
 import alg
 import plot
@@ -29,7 +22,6 @@ if not input_fname:
     print('Warning: please specify the input file position\n')
     lib.help_message()
 
-# TODO: load saved project
 Project.build_reference_system(
     input_fname,
     is_rate_matrix=input_fname.split('.')[-1].lower() != 'h',
@@ -188,11 +180,11 @@ for h_id, system in enumerate(Project):
     for opt in cluster_opt:
         if opt == 's':
             print('Method s: simple cut-off method')
-            alg.simple_cut(system, 0)
+            alg.simple_cut(system)
 
         elif opt == 'r':
             print('Method r: simple ratio cut-off method')
-            alg.simple_ratio_cut(system, 1)
+            alg.simple_ratio_cut(system)
 
         elif opt == 'b':
             print('Method b: bottom-up clustering method')

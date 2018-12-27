@@ -237,7 +237,7 @@ def flow_analysis(system, cluster=None):
 
     target = setting.get('t', 'sink' if 'CTsink' in setting else node_ls[0])
 
-    from obj.map import ClusterMap
+    from obj.cluster_map import ClusterMap
     if cluster is not None:
         if isinstance(cluster, ClusterMap):
             cluster = system.get_cluster_rate_and_energies(cluster)

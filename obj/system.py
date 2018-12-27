@@ -1,5 +1,5 @@
 # import local modules
-from .map import ClusterMap
+from .cluster_map import ClusterMap
 from .tree import MinCutTree
 from lib import *
 import alg
