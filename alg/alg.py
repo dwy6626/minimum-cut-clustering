@@ -81,7 +81,7 @@ def get_integrated_flux(
         grid=100,
         norm=1, plot_details=False,
         plot_name='', divide=5, y_max=0, x_max=0, legend=True,
-        save_to_file=False
+        save_to_file=False, mute=False
 ):
     """
     calculate the time integrated flux
@@ -104,6 +104,8 @@ def get_integrated_flux(
     :param y_max: set the y limit of the figures
     :param legend: (default = True)
     :param save_to_file: save figure or show only
+
+    :param mute: ignore all output (including plot_details!)
 
     :return: n * n numpy matrix: time-integrated flux
     """
@@ -150,6 +152,9 @@ def get_integrated_flux(
             # sort by "loading" of the energy channel
             flux_ls.append([abs_integration[i, j], integrated_flux[i, j, -1],
                             integrated_flux_wo_subtract[i, j, -1], forward, backward, i, j])
+
+    if mute:
+        return integrated_flux_matrix
 
     # print results
     flux_ls.sort(reverse=True)

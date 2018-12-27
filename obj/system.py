@@ -687,7 +687,7 @@ class System:
 
         return pop_seq, time_sequence, nodes
 
-    def get_integrated_flux(self, cluster=None, spline_size=3000, save_to_file=False):
+    def get_integrated_flux(self, cluster=None, spline_size=3000, save_to_file=False, mute=False):
         pop_seq, time_sequence, nodes = self.get_dynamics(cluster)
         pop_seq2, time_sequence2 = spline_grid(pop_seq, time_sequence, spline_size)
 
@@ -705,7 +705,8 @@ class System:
                 plot_name=plot_name,
                 y_max=y_max, x_max=x_max,
                 legend='nolegend' not in setting,
-                save_to_file=save_to_file
+                save_to_file=save_to_file,
+                mute=mute
         )
 
     def get_dynamics(self, cluster=None):
