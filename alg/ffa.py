@@ -214,29 +214,31 @@ def widest_path(G, source, target):
 
 
 # option -F
-def flow_analysis(system, cluster=None):
+def flow_analysis(system, cluster=None, source=None, target=None):
     """
     FFA flow decomposition:
 
-    The legendary Ford-Fulkerson algorithm, using the widest path as augment path
+    The legendary Ford-Fulkerson algorithm (FFA), using the widest path as augment path
 
     :param system: reference system
     :param cluster: should be
                     1. tuple: rate matrix, cluster energies, (plot name)
                     2. ClusterMap object
+    :param source: str, source of FFA
+    :param target: str, target of FFA
+
     :return: flow matrix, flow graph with flow in attr: ['ffa']
     """
-    # TODO: modify the selecting method
-    setting = system.back_ptr.setting
     node_ls = system.ExcitonName
 
-    if setting['init'] in node_ls:
-        source = setting['init']
-    else:
-        source = setting.get('s', node_ls[-1])
+    if source not in node_ls:
+        print_normal('source {} not found, used default source {}'.format(source, node_ls[-1]))
+        source = node_ls[-1]
+    if target not in node_ls:
+        print_normal('target {} not found, used default target {}'.format(target, node_ls[0]))
+        target = node_ls[0]
 
-    target = setting.get('t', 'sink' if 'CTsink' in setting else node_ls[0])
-
+    # find the source/target cluster
     from obj.cluster_map import ClusterMap
     if cluster is not None:
         if isinstance(cluster, ClusterMap):

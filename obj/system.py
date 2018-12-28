@@ -536,7 +536,7 @@ class System:
                 save_to_file=save_to_file
             )
 
-    def get_initial_populations(self, nodes, energies=None, clusters=None, init_option='init'):
+    def get_initial_populations(self, nodes, energies=None, clusters=None, init_option='eq'):
         """
         return the initial population for population dynamics calculation
 
@@ -544,14 +544,17 @@ class System:
 
         :param energies: list of float, corresponding energies of nodes, for init_option='boltzmann'
         :param clusters: list of string, cluster names
-        :param init_option: string,
-            equally (default): equally populated
-            source: populate the highest state
-            sink: populate the lowest state
-            boltz: populate the states by thermal dist.
-            (Exciton Name): populate the specified exciton(s)
-                e.g. '1' => exciton named '1'
-                     '3,4,6' => equally populate excitons '3', '4' and '6'
+        :param init_option:
+            1. string
+                equally (default): equally populated
+                source: populate the highest state
+                sink: populate the lowest state
+                boltz: populate the states by thermal dist.
+                (Exciton Name): populate the specified exciton(s)
+                    e.g. '1' => exciton named '1'
+                         '3,4,6' => equally populate excitons '3', '4' and '6'
+            2. list or numpy array, with length matches the number of clusters
+                initial population (will be normalized)
 
         :return: initial population: n * 1 numpy matrix
         """
@@ -562,8 +565,31 @@ class System:
             is_clustered = False
             size = len(self)
 
+        # string list:
+        if isinstance(init_option, str) and len(re.split(r'[,]', init_option)) == len(self) \
+                and init_option[0] == '[' and init_option[-1] == ']':
+            try:
+                # to ndarray
+                init_option = np.array(re.split(r'[,]', init_option[1:-1]), dtype=float)
+            except:
+                # use default for unexcepted format
+                init_option = 'eq'
+
+        if isinstance(init_option, list) or isinstance(init_option, np.ndarray):
+            if isinstance(init_option, list):
+                pop = np.array(init_option)
+
+            else:
+                pop = init_option
+
+            if len(pop) == len(self) and sum(pop) != 0:
+                pop = pop / sum(pop)
+            else:
+                # use the default: equal partitions
+                pop = np.ones(len(self)) / len(self)
+
         # equal partitions
-        if init_option.lower() in ['equally', 'eq', 'equipartition', 'same']:
+        elif init_option.lower() in ['equally', 'eq', 'equipartition', 'same']:
             pop = np.ones(len(self)) / len(self)
         # boltzmann partitions:
         elif init_option.lower() in ['boltz', 'boltzmann', 'thermal'] and energies is not None:
@@ -636,13 +662,14 @@ class System:
         :return nodes: corresponding node names
         """
         is_clustered = False
-        nodes = self.ExcitonName
+        pop_names = nodes = self.ExcitonName
         energies = self.ExcitonEnergies
 
         rate, cluster_energies, _ = self.__cluster_handler(cluster)
 
         if cluster_energies is not None:
             clusters = rate.keys()
+            pop_names = list(clusters)
             is_clustered = True
         else:
             clusters = None
@@ -662,7 +689,7 @@ class System:
         pop = self.get_initial_populations(nodes, energies, clusters, init_option=self.back_ptr.setting['init'])
 
         # propagation
-        if get_module_logger_level() < 20:
+        if get_module_logger_level()  < 20:
             print('start dynamics calculation')
             timer_start = timeit.default_timer()
 
@@ -682,10 +709,8 @@ class System:
 
         if not is_clustered:
             self.__pop_tuple = pop_seq, propagate_time, time_grid
-        else:
-            nodes = list(clusters)
 
-        return pop_seq, time_sequence, nodes
+        return pop_seq, time_sequence, pop_names
 
     def get_integrated_flux(self, cluster=None, spline_size=3000, save_to_file=False, mute=False):
         pop_seq, time_sequence, nodes = self.get_dynamics(cluster)

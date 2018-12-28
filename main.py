@@ -91,7 +91,7 @@ for h_id, system in enumerate(Project):
 
     # option -F: FFA flow decomposition
     if judge_set.intersection(opt_set['F']):
-        flow_matrix, flow_network = alg.flow_analysis(system)
+        flow_matrix, flow_network = alg.flow_analysis(system, source=Setting['ffa_source'], target=Setting['ffa_target'])
         lib.nx_aux.nx_graph_draw(flow_network, Project.config.get_graphviz_dot_path(), Setting,
                                  system.get_plot_name() + 'FFA', label=alg.FFA_FlowName,
                                  rc_order=system.ExcitonName)

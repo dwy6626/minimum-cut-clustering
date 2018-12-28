@@ -98,7 +98,11 @@ DICTIONARIES
 
     s=[node]
     t=[node]
-        The specific source and target in construction of minimum-cut tree
+        specify source and target in construction of minimum-cut tree
+
+    ffa_source=[node]
+    ffa_target=[node]
+        specify source and target in -F flow analysis
 
     map=[cluster map]
         Manual clustering
@@ -121,9 +125,11 @@ DICTIONARIES
     time=[float], default=6 (ps)
         Dynamics propagation time
 
-    init=[source|sink|equally(default)|boltz|(Exciton Name)]
-        Initial exciton population for dynamics propagation
-        The (Exciton Name) can be a single exciton, or excitons separated by ','
+    init=[source|sink|equally(default)|boltz|(Exciton Name)|(Initial Population)]
+        Initial exciton population for dynamics propagation (including -a -p, -M, -cc)
+        Exciton Name: a single exciton, or format like: 1-3,5
+        Initial Population: [0.1,0.1,0.1,0.1] (brackets needed, no space between items)
+                            the length should match the system size
 
     grid=[Integer], default=100
         Number of time grid in dynamics propagation
