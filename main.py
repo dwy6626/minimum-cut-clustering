@@ -117,7 +117,7 @@ for h_id, system in enumerate(Project):
                                                             save_to_file=True)
         alg.plot_integrate_flux(
             integrated_flux_matrix, system.ExcitonName, system.ExcitonEnergies, system.get_plot_name(),
-            Setting, Project.config.get_graphviz_dot_path()
+            Setting, Project.config.get_graphviz_dot_path(), rc_order=system.ExcitonName
         )
         lib.print_1_line_stars()
 
@@ -296,7 +296,7 @@ if len(Project.data_frame) > 0:
                             )
                             alg.plot_integrate_flux(
                                 integrated_flux_matrix, nodes, cluster_3_tuple[1], cluster_3_tuple[2],
-                                Setting, Project.config.get_graphviz_dot_path()
+                                Setting, Project.config.get_graphviz_dot_path(), rc_order=nodes
                             )
 
                         if cost:

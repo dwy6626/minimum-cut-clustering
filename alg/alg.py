@@ -213,7 +213,7 @@ def get_integrated_flux(
     return integrated_flux_matrix
 
 
-def plot_integrate_flux(integrated_flux_matrix, nodes, energies, plot_name, setting=None, dot_path=''):
+def plot_integrate_flux(integrated_flux_matrix, nodes, energies, plot_name, setting=None, dot_path='', rc_order=None):
     # TODO: replace 'setting'
     graph = nx.DiGraph()
     size = len(nodes)
@@ -223,7 +223,7 @@ def plot_integrate_flux(integrated_flux_matrix, nodes, energies, plot_name, sett
     graph.add_weighted_edges_from(
         ((nodes[j], nodes[i], integrated_flux_matrix[i, j]) for i, j in permutations(range(size), 2))
     )
-    nx_aux.nx_graph_draw(graph, dot_path, setting, plot_name + 'IntegratedFlux', rc_order=nodes)
+    nx_aux.nx_graph_draw(graph, dot_path, setting, plot_name + 'IntegratedFlux', rc_order=rc_order)
 
 
 def save_rate(rate_matrix, energies, save_name):
