@@ -1,8 +1,9 @@
 import logging
+from sys import stdout
 
 
 __module_logger = logging.getLogger('minimum-cut clustering')
-__module_logger.addHandler(logging.StreamHandler())
+__module_logger.addHandler(logging.StreamHandler(stdout))
 __module_logger.setLevel(logging.INFO)
 
 
