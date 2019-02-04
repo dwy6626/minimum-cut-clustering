@@ -130,7 +130,7 @@ class System:
             print_more(from_v_max + 1)
 
             node_name = np.where(from_v_max >= from_v0_max, from_v_max + 1, from_v0_max + 1)
-            print_more(node_name, '\n')
+            print_more('{}\n'.format(node_name))
 
             # unnamed nodes: -1 (-2 + 1)
             if len(node_name[node_name == -1]) == 1:
@@ -163,7 +163,7 @@ class System:
             # corresponding overlap array: overlap between new basis and old basis
             corres_overlap_array = np.diag(overlaps[node_name - 1])
             node_name = [str(i) for i in node_name]
-            print_more('New node names:', node_name)
+            print_more('New node names: {}'.format(node_name))
 
             # overlap factor: the average overlap
             overlap_factor = sum(corres_overlap_array) / len(corres_overlap_array) * 100

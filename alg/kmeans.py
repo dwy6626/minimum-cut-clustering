@@ -111,7 +111,7 @@ def k_means_like(system, power=2):
                 _j, _i = np.unravel_index(np.argmin(var_matrix, axis=None), var_matrix.shape)
                 if system.ExcitonName[_j] in dic_kick:
                     print_more(
-                        'add {} to , kick {} from {}'.format(
+                        'add {} to {}, kick {} from {}'.format(
                             system.ExcitonName[_j], set_to_str(list_set[_i]), dic_kick[system.ExcitonName[_j]],
                             set_to_str(cluster_map[dic_kick[system.ExcitonName[_j]]])
                         )
@@ -174,18 +174,16 @@ def k_means_like(system, power=2):
     # check if DC is run
     df = system.back_ptr.data_frame
 
-    if len(df) != 0:
+    if len(df) > system.get_index():
         df = df[system.get_index()]
         df = df.loc[df['Method'] == 'DC']
-
-    if len(df) == 0:
-        print_more('  run cut-off methods for initial clusters')
-        ref_maps = clx.cut_off_method(system, 4, pass_map=True)
-
-    else:
         ref_maps = {}
         for _, (_, n, cgm, *_) in df.iterrows():
             ref_maps[n] = cgm
+
+    else:
+        print_more('  run cut-off methods for initial clusters')
+        ref_maps = clx.cut_off_method(system, 4, pass_map=True)
 
     for nc in iter_range:
         VarNow = float('inf')
