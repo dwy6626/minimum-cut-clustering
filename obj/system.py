@@ -10,7 +10,11 @@ import plot
 
 
 class System:
-    def __init__(self, reference, back_ptr, index=0, is_rate_matrix=False, additional_hamiltonian_string=''):
+    def __init__(
+            self, reference, back_ptr, index=0,
+            input_disorders=None,
+            is_rate_matrix=False, additional_hamiltonian_string=''
+    ):
         self.__NumberSite = 0
 
         # should align with Hamiltonian
@@ -47,7 +51,7 @@ class System:
         if isinstance(reference, System):
             self.SiteName = reference.SiteName
             self.__NumberSite = len(reference)
-            self.generate_disordered_hamiltonian(reference)
+            self.__generate_disordered_hamiltonian(reference, input_disorders=input_disorders)
             return
 
         elif isinstance(reference, str):
@@ -68,12 +72,12 @@ class System:
     def get_original(self):
         return self.back_ptr.get_reference_system()
 
-    def generate_disordered_hamiltonian(self, reference):
+    def __generate_disordered_hamiltonian(self, reference, input_disorders=None):
         # standard deviation
         sd = pass_float(self.back_ptr.setting.get('sd', 100))
         while True:
-            if len(self.back_ptr.disorders) > self.__index:
-                disorders = self.back_ptr.disorders[self.__index].reshape(len(self))
+            if input_disorders is not None:
+                disorders = input_disorders
                 print_normal('static disorder (cm-1):')
                 print_normal(disorders)
             else:
@@ -171,15 +175,18 @@ class System:
             if has_duplicate(node_name):
                 self.back_ptr.discard_disorders.append(disorders.reshape(1, -1))
                 print('  ... Hamiltonian discarded.')
+                input_disorders = None  # regenerate a disorder set to replace
             else:
                 # sort by label
                 indexing = [node_name.index(n) for n in reference.ExcitonName]
                 self.ExcitonEnergies = w[indexing,]
                 self.ExcitonName = reference.ExcitonName
                 self.EigenVectors = eigv[:, indexing]
+
+                # save to project
                 self.back_ptr.disorders.append(disorders.reshape(1, -1))
-                self.back_ptr.overlap_factors[self.__index] = overlap_factor
-                self.back_ptr.overlap_arrays[self.__index] = corres_overlap_array
+                self.back_ptr.overlap_factors[self.__index - 1] = overlap_factor
+                self.back_ptr.overlap_arrays[self.__index - 1] = corres_overlap_array
 
                 self.Hamiltonian = hamiltonian
                 self.RateConstantMatrix = pd.DataFrame(

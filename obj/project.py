@@ -45,10 +45,12 @@ class Project:
         self.load_pos(self.setting.get('pos'))
 
         # disorder
-        self.disorders = [np.zeros((1, len(self.__reference_system)))]
-        disorder_counts = 0  # finally: len(self.disorders) - 1
+        self.disorders = []
+        disorder_counts = 0  # finally: len(self.disorders)
+        input_disorders = []
         if self.__reference_system.has_hamiltonian():
             disorder = self.setting.get('disorder', '0')
+
             if isinstance(disorder, int):
                 disorder_counts = disorder
             elif disorder.isdigit():
@@ -60,14 +62,21 @@ class Project:
                 if len(lines[0]) != len(self.__reference_system):
                     raise ValueError('size of disorders does not match the Hamiltonian')
                 disorder_counts = len(lines)
-                self.disorders += [np.array(line, dtype=float).reshape(1, -1) for line in lines]
+                input_disorders += [np.array(line, dtype=float).reshape(1, -1) for line in lines]
 
-        self.overlap_factors = [100] + [0] * disorder_counts
-        self.overlap_arrays = [np.ones(len(self.__reference_system))] + \
-                              [np.zeros(len(self.__reference_system))] * disorder_counts
+        self.overlap_factors = [0] * disorder_counts
+        self.overlap_arrays = [np.zeros(len(self.__reference_system))] * disorder_counts
 
         # generate disordered Hamiltonians
-        self.__systems = [System(self.__reference_system, self, i + 1) for i in range(disorder_counts)]
+        self.__systems = []
+        for i in range(disorder_counts):
+            if len(input_disorders) > i:
+                this_disorders = input_disorders[i].reshape(len(self.__reference_system))
+            else:
+                this_disorders = None
+            self.__systems.append(
+                System(self.__reference_system, self, i + 1, input_disorders=this_disorders)
+            )
 
     def get_reference_system(self):
         return self.__reference_system
