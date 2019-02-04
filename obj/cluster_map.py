@@ -266,6 +266,7 @@ class ClusterMap:
         mp = self.copy()
         c = None
         olfac = 100 if h == 0 else proj.overlap_factors[h - 1]
+
         sr = pd.Series((m, n, mp, olfac, c), index=proj.col)
 
         df.loc[len(proj.data_frame[h])] = sr
