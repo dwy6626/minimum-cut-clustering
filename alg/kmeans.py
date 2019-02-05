@@ -137,6 +137,47 @@ def k_means_like(system, power=2):
                 print_more('')
                 break
 
+    # a simple brute-force solution
+    def __km_bf():
+        def __var_cal(_group):
+            _r = 0
+            for _m, _n in combinations(_group, 2):
+                _r += aux_matrix[_m][_n]
+            return _r / len(_group) ** 2 / 2
+
+        def __partition(_collection):
+            if len(_collection) == 1:
+                yield [(_collection, 0)]
+                return
+
+            _first = _collection[0]
+            for _smaller in __partition(_collection[1:]):
+                # _now_val = sum([_val for _subset, _val in _smaller])
+                # insert `first` in each of the subpartition's subsets
+                for _n, (_subset, _subset_val) in enumerate(_smaller):
+                    yield _smaller[:_n] + [([_first] + _subset, __var_cal([_first] + _subset))] + _smaller[
+                                                                                                  _n + 1:]
+                # put `first` in its own subset
+                yield [([_first], 0)] + _smaller
+
+        _results = {}
+
+        for _p in __partition(system.ExcitonName):
+            # put the smaller "cost" into the hashing
+            _val = sum([v for g, v in _p])
+            if len(_p) not in _results:
+                _results[len(_p)] = _p, _val
+            elif _results[len(_p)][1] > _val:
+                _results[len(_p)] = _p, _val
+
+        for _nc in range(2, len(system)):
+            _clx_map = system.get_new_map('KM', one_group=False)
+            _p, _v = _results[_nc]
+            for _g, _ in _p:
+                _clx_map.group_up(_g)
+            print_normal('var = {}'.format(_v))
+            _clx_map.save()
+
     # modify the rate matrix to up_triangle (pickup larger one)
     aux_rate = system.RateConstantMatrix
     uptri = np.triu(aux_rate.values, k=1)
@@ -164,6 +205,11 @@ def k_means_like(system, power=2):
         print_more('renew the KM_inf value to {:.2e}'.format(KM_inf))
     # replace inf with this value
     aux_matrix.values[aux_matrix == -1] = KM_inf
+
+    # use the keyword to run brute-force algorithm
+    if 'bfkm' in system.back_ptr.setting:
+        __km_bf()
+        return
 
     cost = pass_int(system.back_ptr.setting['cost'])
     iter_range = range(2, min([len(system), 1+int(cost)]))
