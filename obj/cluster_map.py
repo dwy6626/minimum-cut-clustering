@@ -12,13 +12,13 @@ class ClusterMap:
         self.__data = []
 
         if site_map:
-            nodes = system.SiteName
+            nodes = list(system.SiteName)
         else:
-            nodes = system.ExcitonName
+            nodes = list(system.ExcitonName)
         self.back_ptr = system
 
         if one_group:
-            self.__data.append(copy(nodes))
+            self.__data.append(nodes)
             self.__number_of_cluster = 1
             self.__dict = {n: self.__data[0] for n in nodes}
             for i in range(len(nodes) - 1):

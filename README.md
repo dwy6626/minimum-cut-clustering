@@ -15,7 +15,7 @@ The minimum-cut clustering method is developed by Wei-Hsiang Tseng (Dimsplendid)
   *in preparation.*
 
 ## Requirements
-- This tool is wrote and test on **Python 3.7**
+- This tool is wrote and test on **Python 3.6**
 - For python modules: see `requirements.txt`
 - **Incompatible** with Python 2.X
 - To plot graph, **graphviz** is needed, download: https://www.graphviz.org
