@@ -4,6 +4,6 @@ output
 .mincut_configure
 .idea
 venv
-
+.vscode
 
 test\.py
