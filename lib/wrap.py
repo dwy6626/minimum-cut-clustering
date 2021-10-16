@@ -85,33 +85,27 @@ def wraps(list1, maxlen=float('inf'), width=float('inf'), trimer=False):
 
 
 # wrap an integer list
-def int_wrap(long_list, to_str=False):
-    if len(long_list) > 1:
-        append_list = []
-        long_list = sorted(map(int, long_list))
-        x = long_list[0]  # start number of 'x-y'
-        y = long_list[0]
-        for n in long_list[1:]:
-            if n != y + 1:
-                if x + 1 < y:  # 1, 2 use 1 2 | 1, 2, 3 use 1-3
-                    append_list.append(str(x) + '\u2013' + str(y))
-                elif x == y - 1:
-                    append_list.extend([str(x), str(y)])
-                else:
-                    append_list.append(str(x))
-                x, y = n, n
-            else:  # n == y + 1:
-                y = n  # end number of 'x-y'
-            if n == long_list[-1]:
-                if x + 1 < y:  # 1, 2 use 1 2 | 1, 2, 3 use 1-3
-                    append_list.append(str(x) + '\u2013' + str(y))
-                elif x == y - 1:
-                    append_list.extend([str(x), str(y)])
-                else:
-                    append_list.append(str(x))
-    else:
-        append_list = long_list
-    if to_str:
-        return ', '.join(append_list)
-    else:
-        return append_list
+def int_wrap(long_list):
+    if len(long_list) < 2:
+        return list(map(str, long_list))
+
+    sorted_list = sorted(map(int, long_list))
+    res = []
+    i = 0
+    j = 1
+    while i < len(sorted_list):
+        if j >= len(sorted_list):
+            next_num = sorted_list[j-1] + 2
+        else:
+            next_num = sorted_list[j]
+        if next_num - sorted_list[j-1] > 1:
+            if j - i > 2:
+                res.append(f'{sorted_list[i]}\u2013{sorted_list[j-1]}')
+            elif j - i == 2:
+                res.append(str(sorted_list[i]))
+                res.append(str(sorted_list[j-1]))
+            else:
+                res.append(str(sorted_list[i]))
+            i = j
+        j += 1
+    return res
